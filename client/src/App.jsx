@@ -1,28 +1,39 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+    BrowserRouter,
+    Routes,
+    Route,
+    useLocation
+} from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Home from "./pages/Home";
-import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-
+import Login from "./pages/Login";
 import BrandBrain from "./pages/BrandBrain";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetails from "./pages/CampaignDetails";
 import Dashboard from "./pages/Dashboard";
+import CampaignCalendar from "./pages/CampaignCalendar";
+import ContentChecker from "./pages/ContentChecker";
+import AIAssistant from "./pages/AIAssistant";
+import Settings from "./pages/Settings";
 
 import "./index.css";
 
-function App() {
-    return (
-        <BrowserRouter>
 
-            <Navbar />
+function AppContent() {
+    const location = useLocation();
+
+    const isDashboard =
+        location.pathname === "/dashboard";
+
+    return (
+        <>
+            {!isDashboard && <Navbar />}
 
             <Routes>
-
-                {/* ================= PUBLIC ================= */}
 
                 <Route
                     path="/"
@@ -30,17 +41,14 @@ function App() {
                 />
 
                 <Route
-                    path="/login"
-                    element={<Login />}
-                />
-
-                <Route
                     path="/signup"
                     element={<Signup />}
                 />
 
-
-                {/* ================= PROTECTED ================= */}
+                <Route
+                    path="/login"
+                    element={<Login />}
+                />
 
                 <Route
                     path="/brand-brain"
@@ -78,10 +86,52 @@ function App() {
                     }
                 />
 
-            </Routes>
+                <Route
+                    path="/campaign-calendar"
+                    element={
+                        <ProtectedRoute>
+                            <CampaignCalendar />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/content-checker"
+                    element={
+                        <ProtectedRoute>
+                            <ContentChecker />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/ai-assistant"
+                    element={
+                        <ProtectedRoute>
+                            <AIAssistant />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/settings"
+                    element={
+                        <ProtectedRoute>
+                            <Settings />
+                        </ProtectedRoute>
+                    }
+                />
 
+            </Routes>
+        </>
+    );
+}
+
+
+function App() {
+    return (
+        <BrowserRouter>
+            <AppContent />
         </BrowserRouter>
     );
 }
+
 
 export default App;

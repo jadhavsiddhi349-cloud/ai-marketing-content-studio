@@ -35,12 +35,33 @@ function CreateCampaign() {
     const [message, setMessage] = useState("");
 
 
+    /* =========================================================
+       LOAD BRANDS
+    ========================================================= */
+
     useEffect(() => {
+
+        const currentUser = JSON.parse(
+            localStorage.getItem("brandai_current_user") || "null"
+        );
+
+
+        if (!currentUser) {
+
+            navigate("/login");
+
+            return;
+        }
+
 
         loadBrands();
 
-    }, []);
+    }, [navigate]);
 
+
+    /* =========================================================
+       LOAD BRANDS FROM BACKEND
+    ========================================================= */
 
     const loadBrands = async () => {
 
@@ -48,16 +69,24 @@ function CreateCampaign() {
 
             const response = await getBrands();
 
-            setBrands(response.data.brands);
+            setBrands(
+                response.data?.brands || []
+            );
 
         } catch (error) {
 
-            console.log(error);
+            console.log("Could not load brands:", error);
+
+            setBrands([]);
 
         }
 
     };
 
+
+    /* =========================================================
+       FORM CHANGE
+    ========================================================= */
 
     const handleChange = (e) => {
 
@@ -68,6 +97,10 @@ function CreateCampaign() {
 
     };
 
+
+    /* =========================================================
+       PLATFORM SELECTION
+    ========================================================= */
 
     const handlePlatformChange = (platform) => {
 
@@ -91,30 +124,322 @@ function CreateCampaign() {
     };
 
 
+    /* =========================================================
+       CREATE CAMPAIGN
+    ========================================================= */
+
     const handleSubmit = async (e) => {
 
         e.preventDefault();
 
-        setLoading(true);
         setMessage("");
+
+
+        /* =====================================================
+           CHECK LOGIN
+        ===================================================== */
+
+        const currentUser = JSON.parse(
+            localStorage.getItem("brandai_current_user") || "null"
+        );
+
+
+        if (!currentUser) {
+
+            navigate("/login");
+
+            return;
+        }
+
+
+        /* =====================================================
+           CHECK PLATFORM
+        ===================================================== */
+
+        if (platforms.length === 0) {
+
+            setMessage(
+                "Please select at least one platform."
+            );
+
+            return;
+        }
+
+
+        setLoading(true);
+
 
         try {
 
+            /* =================================================
+               SEND CAMPAIGN TO BACKEND
+            ================================================= */
+
             const response = await createCampaign({
+
                 ...form,
+
                 platforms
+
             });
 
-            const campaignId =
-                response.data.campaign._id;
 
-            navigate(`/campaign/${campaignId}`);
+            const backendCampaign =
+                response.data?.campaign;
+
+
+            /* =================================================
+               GET CAMPAIGN ID
+            ================================================= */
+
+            const campaignId =
+                backendCampaign?._id ||
+                backendCampaign?.id ||
+                Date.now();
+
+
+            /* =================================================
+               DETERMINE CONTENT COUNT
+            ================================================= */
+
+            let contentCount = 0;
+
+
+            if (
+                backendCampaign?.contentCount !== undefined
+            ) {
+
+                contentCount =
+                    Number(
+                        backendCampaign.contentCount
+                    );
+
+            } else if (
+                Array.isArray(
+                    backendCampaign?.content
+                )
+            ) {
+
+                contentCount =
+                    backendCampaign.content.length;
+
+            } else if (
+                backendCampaign?.content
+            ) {
+
+                contentCount = 1;
+
+            } else {
+
+                /*
+                 * Each selected platform represents
+                 * one initial content piece.
+                 */
+
+                contentCount = platforms.length;
+
+            }
+
+
+            /* =================================================
+               CREATE LOCAL CAMPAIGN RECORD
+            ================================================= */
+
+            const localCampaign = {
+
+                id: campaignId,
+
+                _id: campaignId,
+
+                campaignName:
+                    form.campaignName,
+
+                goal:
+                    form.goal,
+
+                product:
+                    form.product,
+
+                audience:
+                    form.audience,
+
+                tone:
+                    form.tone,
+
+                brandId:
+                    form.brandId,
+
+                platforms:
+                    platforms,
+
+                contentCount:
+                    contentCount,
+
+                status:
+                    backendCampaign?.status ||
+                    "generated",
+
+                approved:
+                    backendCampaign?.approved ||
+                    false,
+
+                createdAt:
+                    backendCampaign?.createdAt ||
+                    new Date().toISOString()
+
+            };
+
+
+            /* =================================================
+               LOAD EXISTING USER CAMPAIGNS
+            ================================================= */
+
+            const campaignStorageKey =
+                `brandai_campaigns_${currentUser.id}`;
+
+
+            const existingCampaigns =
+                JSON.parse(
+                    localStorage.getItem(
+                        campaignStorageKey
+                    ) || "[]"
+                );
+
+
+            /* =================================================
+               SAVE CAMPAIGN
+            ================================================= */
+
+            const updatedCampaigns = [
+
+                localCampaign,
+
+                ...existingCampaigns
+
+            ];
+
+
+            localStorage.setItem(
+                campaignStorageKey,
+                JSON.stringify(updatedCampaigns)
+            );
+
+
+            /* =================================================
+               CREATE RECENT ACTIVITY
+            ================================================= */
+
+            const activityStorageKey =
+                `brandai_activity_${currentUser.id}`;
+
+
+            const existingActivities =
+                JSON.parse(
+                    localStorage.getItem(
+                        activityStorageKey
+                    ) || "[]"
+                );
+
+
+            const campaignActivity = {
+
+                id:
+                    `campaign-${campaignId}-${Date.now()}`,
+
+                type:
+                    "campaign",
+
+                title:
+                    "Campaign generated",
+
+                description:
+                    form.campaignName,
+
+                campaignId:
+                    campaignId,
+
+                createdAt:
+                    new Date().toISOString()
+
+            };
+
+
+            const contentActivity = {
+
+                id:
+                    `content-${campaignId}-${Date.now()}`,
+
+                type:
+                    "content",
+
+                title:
+                    "Content generated",
+
+                description:
+                    `${platforms.length} platform${
+                        platforms.length === 1
+                            ? ""
+                            : "s"
+                    } selected`,
+
+                campaignId:
+                    campaignId,
+
+                createdAt:
+                    new Date().toISOString()
+
+            };
+
+
+            const updatedActivities = [
+
+                contentActivity,
+
+                campaignActivity,
+
+                ...existingActivities
+
+            ].slice(0, 20);
+
+
+            localStorage.setItem(
+                activityStorageKey,
+                JSON.stringify(updatedActivities)
+            );
+
+
+            /* =================================================
+               TELL DASHBOARD TO REFRESH
+            ================================================= */
+
+            window.dispatchEvent(
+                new Event("brandai-dashboard-update")
+            );
+
+
+            /* =================================================
+               OPEN CAMPAIGN DETAILS
+            ================================================= */
+
+            navigate(
+                `/campaign/${campaignId}`
+            );
+
 
         } catch (error) {
 
+            console.log(
+                "Campaign generation error:",
+                error
+            );
+
+
             setMessage(
+
                 error.response?.data?.message ||
-                "Campaign generation failed"
+
+                "Campaign generation failed. Please try again."
+
             );
 
         } finally {
@@ -130,6 +455,11 @@ function CreateCampaign() {
 
         <main className="app-page">
 
+
+            {/* =================================================
+                PAGE HEADING
+            ================================================= */}
+
             <div className="page-heading">
 
                 <div className="small-badge">
@@ -140,9 +470,11 @@ function CreateCampaign() {
 
                 </div>
 
+
                 <h1>
                     Create your <span>campaign.</span>
                 </h1>
+
 
                 <p>
                     One brief. Multiple platforms.
@@ -152,21 +484,29 @@ function CreateCampaign() {
             </div>
 
 
+            {/* =================================================
+                FORM
+            ================================================= */}
+
             <form
                 className="glass-form"
                 onSubmit={handleSubmit}
             >
 
+
                 <div className="form-grid">
 
 
-                    {/* BRAND */}
+                    {/* =================================================
+                        BRAND
+                    ================================================= */}
 
                     <div className="input-group full">
 
                         <label>
                             Select Brand
                         </label>
+
 
                         <select
                             name="brandId"
@@ -179,29 +519,35 @@ function CreateCampaign() {
                                 Select your Brand Brain
                             </option>
 
-                            {brands.map(brand => (
 
-                                <option
-                                    key={brand._id}
-                                    value={brand._id}
-                                >
-                                    {brand.brandName}
-                                </option>
+                            {brands.map(
+                                (brand) => (
 
-                            ))}
+                                    <option
+                                        key={brand._id}
+                                        value={brand._id}
+                                    >
+                                        {brand.brandName}
+                                    </option>
+
+                                )
+                            )}
 
                         </select>
 
                     </div>
 
 
-                    {/* CAMPAIGN NAME */}
+                    {/* =================================================
+                        CAMPAIGN NAME
+                    ================================================= */}
 
                     <div className="input-group">
 
                         <label>
                             Campaign Name
                         </label>
+
 
                         <input
                             name="campaignName"
@@ -214,13 +560,16 @@ function CreateCampaign() {
                     </div>
 
 
-                    {/* GOAL */}
+                    {/* =================================================
+                        GOAL
+                    ================================================= */}
 
                     <div className="input-group">
 
                         <label>
                             Campaign Goal
                         </label>
+
 
                         <input
                             name="goal"
@@ -233,13 +582,16 @@ function CreateCampaign() {
                     </div>
 
 
-                    {/* PRODUCT */}
+                    {/* =================================================
+                        PRODUCT
+                    ================================================= */}
 
                     <div className="input-group">
 
                         <label>
                             Product
                         </label>
+
 
                         <input
                             name="product"
@@ -252,13 +604,16 @@ function CreateCampaign() {
                     </div>
 
 
-                    {/* AUDIENCE */}
+                    {/* =================================================
+                        AUDIENCE
+                    ================================================= */}
 
                     <div className="input-group">
 
                         <label>
                             Target Audience
                         </label>
+
 
                         <input
                             name="audience"
@@ -271,13 +626,16 @@ function CreateCampaign() {
                     </div>
 
 
-                    {/* TONE */}
+                    {/* =================================================
+                        TONE
+                    ================================================= */}
 
                     <div className="input-group full">
 
                         <label>
                             Campaign Tone
                         </label>
+
 
                         <input
                             name="tone"
@@ -292,7 +650,9 @@ function CreateCampaign() {
                 </div>
 
 
-                {/* PLATFORMS */}
+                {/* =================================================
+                    PLATFORMS
+                ================================================= */}
 
                 <h3 className="platform-heading">
                     Select Platforms
@@ -305,9 +665,13 @@ function CreateCampaign() {
                     <Platform
                         name="Instagram"
                         icon={<span>◎</span>}
-                        selected={platforms.includes("Instagram")}
+                        selected={
+                            platforms.includes("Instagram")
+                        }
                         onClick={() =>
-                            handlePlatformChange("Instagram")
+                            handlePlatformChange(
+                                "Instagram"
+                            )
                         }
                     />
 
@@ -315,9 +679,13 @@ function CreateCampaign() {
                     <Platform
                         name="Facebook"
                         icon={<span>f</span>}
-                        selected={platforms.includes("Facebook")}
+                        selected={
+                            platforms.includes("Facebook")
+                        }
                         onClick={() =>
-                            handlePlatformChange("Facebook")
+                            handlePlatformChange(
+                                "Facebook"
+                            )
                         }
                     />
 
@@ -325,9 +693,13 @@ function CreateCampaign() {
                     <Platform
                         name="LinkedIn"
                         icon={<span>in</span>}
-                        selected={platforms.includes("LinkedIn")}
+                        selected={
+                            platforms.includes("LinkedIn")
+                        }
                         onClick={() =>
-                            handlePlatformChange("LinkedIn")
+                            handlePlatformChange(
+                                "LinkedIn"
+                            )
                         }
                     />
 
@@ -335,9 +707,13 @@ function CreateCampaign() {
                     <Platform
                         name="YouTube"
                         icon={<span>▶</span>}
-                        selected={platforms.includes("YouTube")}
+                        selected={
+                            platforms.includes("YouTube")
+                        }
                         onClick={() =>
-                            handlePlatformChange("YouTube")
+                            handlePlatformChange(
+                                "YouTube"
+                            )
                         }
                     />
 
@@ -345,9 +721,13 @@ function CreateCampaign() {
                     <Platform
                         name="WhatsApp"
                         icon={<MessageCircle />}
-                        selected={platforms.includes("WhatsApp")}
+                        selected={
+                            platforms.includes("WhatsApp")
+                        }
                         onClick={() =>
-                            handlePlatformChange("WhatsApp")
+                            handlePlatformChange(
+                                "WhatsApp"
+                            )
                         }
                     />
 
@@ -355,16 +735,22 @@ function CreateCampaign() {
                     <Platform
                         name="Email"
                         icon={<Mail />}
-                        selected={platforms.includes("Email")}
+                        selected={
+                            platforms.includes("Email")
+                        }
                         onClick={() =>
-                            handlePlatformChange("Email")
+                            handlePlatformChange(
+                                "Email"
+                            )
                         }
                     />
 
                 </div>
 
 
-                {/* GENERATE BUTTON */}
+                {/* =================================================
+                    GENERATE BUTTON
+                ================================================= */}
 
                 <button
                     className="primary-btn form-button"
@@ -373,15 +759,21 @@ function CreateCampaign() {
 
                     <Sparkles size={18} />
 
+
                     {loading
+
                         ? "Generating..."
+
                         : "Generate Complete Campaign"
+
                     }
 
                 </button>
 
 
-                {/* ERROR MESSAGE */}
+                {/* =================================================
+                    ERROR MESSAGE
+                ================================================= */}
 
                 {message && (
 
@@ -402,7 +794,9 @@ function CreateCampaign() {
 }
 
 
-/* ================= PLATFORM COMPONENT ================= */
+/* =========================================================
+   PLATFORM COMPONENT
+========================================================= */
 
 function Platform({
     name,
@@ -425,7 +819,9 @@ function Platform({
 
             {icon}
 
-            <span>{name}</span>
+            <span>
+                {name}
+            </span>
 
         </button>
 

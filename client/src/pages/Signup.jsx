@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, ArrowRight, Sparkles } from "lucide-react";
 
+
 function Signup() {
+
     const navigate = useNavigate();
 
     const [form, setForm] = useState({
@@ -14,124 +16,221 @@ function Signup() {
 
     const [error, setError] = useState("");
 
+
     const handleChange = (e) => {
+
         setForm({
             ...form,
             [e.target.name]: e.target.value
         });
 
-        setError("");
     };
 
+
     const handleSubmit = (e) => {
+
         e.preventDefault();
 
-        const {
-            name,
-            email,
-            password,
-            confirmPassword
-        } = form;
+        setError("");
 
-        if (!name || !email || !password || !confirmPassword) {
+
+        /* =========================================
+           VALIDATION
+        ========================================= */
+
+        if (
+            !form.name.trim() ||
+            !form.email.trim() ||
+            !form.password ||
+            !form.confirmPassword
+        ) {
+
             setError("Please fill in all fields.");
+
             return;
         }
 
-        if (password.length < 6) {
-            setError("Password must contain at least 6 characters.");
+
+        if (form.password.length < 6) {
+
+            setError(
+                "Password must be at least 6 characters."
+            );
+
             return;
         }
 
-        if (password !== confirmPassword) {
+
+        if (form.password !== form.confirmPassword) {
+
             setError("Passwords do not match.");
+
             return;
         }
+
+
+        /* =========================================
+           GET EXISTING ACCOUNTS
+        ========================================= */
 
         const accounts = JSON.parse(
             localStorage.getItem("brandai_accounts") || "[]"
         );
 
+
+        /* =========================================
+           CHECK EXISTING EMAIL
+        ========================================= */
+
         const existingAccount = accounts.find(
             (account) =>
-                account.email.toLowerCase() === email.toLowerCase()
+                account.email.toLowerCase() ===
+                form.email.trim().toLowerCase()
         );
 
+
         if (existingAccount) {
-            setError("An account with this email already exists.");
+
+            setError(
+                "An account with this email already exists."
+            );
+
             return;
         }
 
+
+        /* =========================================
+           CREATE ACCOUNT
+        ========================================= */
+
         const newAccount = {
+
             id: Date.now(),
-            name,
-            email,
-            password
+
+            name: form.name.trim(),
+
+            email: form.email.trim().toLowerCase(),
+
+            password: form.password
+
         };
 
+
+        /* =========================================
+           SAVE ACCOUNT
+        ========================================= */
+
         accounts.push(newAccount);
+
 
         localStorage.setItem(
             "brandai_accounts",
             JSON.stringify(accounts)
         );
 
+
+        /* =========================================
+           CREATE LOGIN SESSION
+        ========================================= */
+
+        const currentUser = {
+
+            id: newAccount.id,
+
+            name: newAccount.name,
+
+            email: newAccount.email
+
+        };
+
+
         localStorage.setItem(
             "brandai_current_user",
-            JSON.stringify({
-                id: newAccount.id,
-                name: newAccount.name,
-                email: newAccount.email
-            })
+            JSON.stringify(currentUser)
         );
 
-        navigate("/dashboard");
+
+        /* =========================================
+           GO TO BRAND BRAIN
+        ========================================= */
+
+        navigate("/brand-brain");
+
     };
 
+
     return (
+
         <main className="auth-page">
 
             <div className="auth-card">
 
+
+                {/* =====================================
+                    ICON
+                ===================================== */}
+
                 <div className="auth-icon">
+
                     <UserPlus size={28} />
+
                 </div>
+
+
+                {/* =====================================
+                    HEADER
+                ===================================== */}
 
                 <div className="auth-header">
 
                     <div className="small-badge">
+
                         <Sparkles size={14} />
-                        JOIN BRANDAI
+
+                        BRANDAI
+
                     </div>
 
+
                     <h1>
+
                         Create your
-                        <span> account.</span>
+
+                        <span>
+                            {" "}account.
+                        </span>
+
                     </h1>
 
+
                     <p>
-                        Create an account and start building
-                        AI-powered marketing campaigns.
+
+                        Create your BrandAI account and start
+                        building AI-powered campaigns.
+
                     </p>
 
                 </div>
 
-                {error && (
-                    <div className="auth-error">
-                        {error}
-                    </div>
-                )}
+
+                {/* =====================================
+                    FORM
+                ===================================== */}
 
                 <form
                     className="auth-form"
                     onSubmit={handleSubmit}
                 >
 
+
+                    {/* NAME */}
+
                     <div className="form-group">
 
                         <label>
                             Full Name
                         </label>
+
 
                         <input
                             type="text"
@@ -143,11 +242,15 @@ function Signup() {
 
                     </div>
 
+
+                    {/* EMAIL */}
+
                     <div className="form-group">
 
                         <label>
-                            Email Address
+                            Email
                         </label>
+
 
                         <input
                             type="email"
@@ -159,11 +262,15 @@ function Signup() {
 
                     </div>
 
+
+                    {/* PASSWORD */}
+
                     <div className="form-group">
 
                         <label>
                             Password
                         </label>
+
 
                         <input
                             type="password"
@@ -175,11 +282,15 @@ function Signup() {
 
                     </div>
 
+
+                    {/* CONFIRM PASSWORD */}
+
                     <div className="form-group">
 
                         <label>
                             Confirm Password
                         </label>
+
 
                         <input
                             type="password"
@@ -191,15 +302,40 @@ function Signup() {
 
                     </div>
 
+
+                    {/* ERROR */}
+
+                    {error && (
+
+                        <div className="auth-error">
+
+                            {error}
+
+                        </div>
+
+                    )}
+
+
+                    {/* SUBMIT */}
+
                     <button
                         type="submit"
                         className="primary-btn auth-submit"
                     >
+
                         Create Account
+
                         <ArrowRight size={18} />
+
                     </button>
 
+
                 </form>
+
+
+                {/* =====================================
+                    FOOTER
+                ===================================== */}
 
                 <div className="auth-footer">
 
@@ -207,16 +343,23 @@ function Signup() {
                         Already have an account?
                     </p>
 
+
                     <Link to="/login">
+
                         Sign In
+
                     </Link>
 
                 </div>
 
+
             </div>
 
         </main>
+
     );
+
 }
+
 
 export default Signup;

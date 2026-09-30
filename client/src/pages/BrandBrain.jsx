@@ -1,23 +1,55 @@
 import { useState } from "react";
-import { createBrand } from "../services/api";
-import { Sparkles, Save } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+import {
+    Brain,
+    Sparkles,
+    ArrowRight,
+    Users,
+    MessageCircle,
+    Package,
+    Palette,
+    Building2
+} from "lucide-react";
+
 
 function BrandBrain() {
 
-    const [form, setForm] = useState({
-        brandName: "",
-        description: "",
-        tone: "",
-        targetAudience: "",
-        productName: "",
-        productDescription: "",
-        offers: "",
-        preferredStyle: "",
-        preferredLanguage: "English"
-    });
+    const navigate = useNavigate();
 
-    const [message, setMessage] = useState("");
-    const [loading, setLoading] = useState(false);
+    const currentUser = JSON.parse(
+        localStorage.getItem("brandai_current_user") || "null"
+    );
+
+
+    const savedBrand = currentUser
+        ? JSON.parse(
+            localStorage.getItem(
+                `brandai_brand_${currentUser.id}`
+            ) || "null"
+        )
+        : null;
+
+
+    const [form, setForm] = useState(
+        savedBrand || {
+            brandName: "",
+            industry: "",
+            audience: "",
+            tone: "",
+            products: "",
+            description: "",
+            colors: ""
+        }
+    );
+
+
+    const [error, setError] = useState("");
+
+
+    const [savedMessage, setSavedMessage] = useState(
+        Boolean(savedBrand)
+    );
 
 
     const handleChange = (e) => {
@@ -27,234 +59,424 @@ function BrandBrain() {
             [e.target.name]: e.target.value
         });
 
+        setSavedMessage(false);
     };
 
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
 
         e.preventDefault();
 
-        setLoading(true);
-        setMessage("");
+        setError("");
+        setSavedMessage(false);
 
-        try {
 
-            await createBrand({
+        if (!currentUser) {
+            navigate("/login");
+            return;
+        }
 
-                brandName: form.brandName,
 
-                description: form.description,
+        if (
+            !form.brandName.trim() ||
+            !form.industry.trim() ||
+            !form.audience.trim() ||
+            !form.tone ||
+            !form.products.trim() ||
+            !form.description.trim()
+        ) {
 
-                tone: form.tone,
-
-                targetAudience: form.targetAudience,
-
-                products: [
-                    {
-                        name: form.productName,
-                        description: form.productDescription
-                    }
-                ],
-
-                offers: form.offers,
-
-                preferredStyle: form.preferredStyle,
-
-                preferredLanguage: form.preferredLanguage
-
-            });
-
-            setMessage("Brand Brain saved successfully! ✨");
-
-        } catch (error) {
-
-            setMessage(
-                error.response?.data?.message ||
-                "Something went wrong"
+            setError(
+                "Please complete all required brand information."
             );
 
-        } finally {
-
-            setLoading(false);
-
+            return;
         }
+
+
+        /*
+         * SAVE BRAND FOR THIS SPECIFIC USER
+         */
+
+        localStorage.setItem(
+            `brandai_brand_${currentUser.id}`,
+            JSON.stringify(form)
+        );
+
+
+        /*
+         * MARK BRAND SETUP AS COMPLETED
+         */
+
+        localStorage.setItem(
+            `brandai_brand_setup_${currentUser.id}`,
+            "completed"
+        );
+
+
+        /*
+         * LET OTHER PAGES KNOW THAT
+         * THE BRAND INFORMATION CHANGED
+         */
+
+        window.dispatchEvent(
+            new Event("brandai-dashboard-update")
+        );
+
+
+        setSavedMessage(true);
+
+
+        /*
+         * RETURN TO DASHBOARD
+         */
+
+        setTimeout(() => {
+            navigate("/dashboard");
+        }, 500);
 
     };
 
 
     return (
 
-        <main className="app-page">
+        <main className="brand-brain-page">
 
-            <div className="page-heading">
+            <div className="brand-brain-container">
 
-                <div className="small-badge">
-                    <Sparkles size={14} />
-                    BRAND INTELLIGENCE
+
+                {/* HEADER */}
+
+                <div className="brand-brain-header">
+
+                    <div className="brand-brain-icon">
+
+                        <Brain size={30} />
+
+                    </div>
+
+
+                    <div>
+
+                        <div className="small-badge">
+
+                            <Sparkles size={14} />
+
+                            BRAND INTELLIGENCE
+
+                        </div>
+
+
+                        <h1>
+
+                            {savedBrand
+                                ? "Your"
+                                : "Build your"}
+
+                            <span>
+                                {" "}Brand Brain.
+                            </span>
+
+                        </h1>
+
+
+                        <p>
+
+                            {savedBrand
+                                ? "Your saved brand information is shown below. You can update it whenever your brand changes."
+                                : "Tell BrandAI about your brand. We'll remember it every time you return."
+                            }
+
+                        </p>
+
+                    </div>
+
                 </div>
 
-                <h1>
-                    Build your <span>Brand Brain.</span>
-                </h1>
 
-                <p>
-                    Give BrandAI the information it needs to
-                    understand your brand.
-                </p>
+                {/* FORM */}
 
-            </div>
+                <form
+                    className="brand-brain-form"
+                    onSubmit={handleSubmit}
+                >
 
 
-            <form
-                className="glass-form"
-                onSubmit={handleSubmit}
-            >
+                    <div className="brand-form-grid">
 
-                <div className="form-grid">
 
-                    <div className="input-group">
-                        <label>Brand Name</label>
+                        {/* BRAND NAME */}
 
-                        <input
-                            name="brandName"
-                            value={form.brandName}
-                            onChange={handleChange}
-                            placeholder="e.g. FreshBite"
-                            required
-                        />
+                        <div className="brand-form-group">
+
+                            <label>
+
+                                <Building2 size={17} />
+
+                                Brand Name
+
+                            </label>
+
+
+                            <input
+                                type="text"
+                                name="brandName"
+                                placeholder="e.g. TrendyWear"
+                                value={form.brandName}
+                                onChange={handleChange}
+                            />
+
+                        </div>
+
+
+                        {/* INDUSTRY */}
+
+                        <div className="brand-form-group">
+
+                            <label>
+
+                                <Package size={17} />
+
+                                Industry
+
+                            </label>
+
+
+                            <input
+                                type="text"
+                                name="industry"
+                                placeholder="e.g. Fashion & Lifestyle"
+                                value={form.industry}
+                                onChange={handleChange}
+                            />
+
+                        </div>
+
+
+                        {/* AUDIENCE */}
+
+                        <div className="brand-form-group">
+
+                            <label>
+
+                                <Users size={17} />
+
+                                Target Audience
+
+                            </label>
+
+
+                            <input
+                                type="text"
+                                name="audience"
+                                placeholder="e.g. College Students"
+                                value={form.audience}
+                                onChange={handleChange}
+                            />
+
+                        </div>
+
+
+                        {/* TONE */}
+
+                        <div className="brand-form-group">
+
+                            <label>
+
+                                <MessageCircle size={17} />
+
+                                Brand Tone
+
+                            </label>
+
+
+                            <select
+                                name="tone"
+                                value={form.tone}
+                                onChange={handleChange}
+                            >
+
+                                <option value="">
+                                    Select brand tone
+                                </option>
+
+                                <option value="Fun & Friendly">
+                                    Fun & Friendly
+                                </option>
+
+                                <option value="Professional">
+                                    Professional
+                                </option>
+
+                                <option value="Modern">
+                                    Modern
+                                </option>
+
+                                <option value="Bold">
+                                    Bold
+                                </option>
+
+                                <option value="Luxury">
+                                    Luxury
+                                </option>
+
+                                <option value="Minimal">
+                                    Minimal
+                                </option>
+
+                            </select>
+
+                        </div>
+
                     </div>
 
 
-                    <div className="input-group">
-                        <label>Brand Tone</label>
+                    {/* PRODUCTS */}
 
-                        <input
-                            name="tone"
-                            value={form.tone}
+                    <div className="brand-form-group">
+
+                        <label>
+
+                            <Package size={17} />
+
+                            Products / Services
+
+                        </label>
+
+
+                        <textarea
+                            name="products"
+                            placeholder="Example: Clothing, accessories, footwear..."
+                            value={form.products}
                             onChange={handleChange}
-                            placeholder="Friendly, Modern..."
-                            required
+                            rows="3"
                         />
+
                     </div>
 
 
-                    <div className="input-group full">
-                        <label>Brand Description</label>
+                    {/* DESCRIPTION */}
+
+                    <div className="brand-form-group">
+
+                        <label>
+
+                            <Brain size={17} />
+
+                            About Your Brand
+
+                        </label>
+
 
                         <textarea
                             name="description"
+                            placeholder="Describe your brand, what makes it different, and what you want customers to remember..."
                             value={form.description}
                             onChange={handleChange}
-                            placeholder="Tell us about your brand..."
+                            rows="5"
                         />
+
                     </div>
 
 
-                    <div className="input-group">
-                        <label>Target Audience</label>
+                    {/* COLORS */}
+
+                    <div className="brand-form-group">
+
+                        <label>
+
+                            <Palette size={17} />
+
+                            Brand Colors
+
+                        </label>
+
 
                         <input
-                            name="targetAudience"
-                            value={form.targetAudience}
+                            type="text"
+                            name="colors"
+                            placeholder="Example: Purple, Blue, White"
+                            value={form.colors}
                             onChange={handleChange}
-                            placeholder="College students"
-                            required
                         />
+
                     </div>
 
 
-                    <div className="input-group">
-                        <label>Product Name</label>
+                    {/* ERROR */}
 
-                        <input
-                            name="productName"
-                            value={form.productName}
-                            onChange={handleChange}
-                            placeholder="Protein Bowl"
-                            required
-                        />
-                    </div>
+                    {error && (
 
+                        <div className="auth-error">
 
-                    <div className="input-group full">
-                        <label>Product Description</label>
+                            {error}
 
-                        <textarea
-                            name="productDescription"
-                            value={form.productDescription}
-                            onChange={handleChange}
-                            placeholder="Describe your product..."
-                        />
-                    </div>
+                        </div>
+
+                    )}
 
 
-                    <div className="input-group">
-                        <label>Offers</label>
+                    {/* SUCCESS */}
 
-                        <input
-                            name="offers"
-                            value={form.offers}
-                            onChange={handleChange}
-                            placeholder="20% off"
-                        />
-                    </div>
+                    {savedMessage && (
 
+                        <div className="brand-saved-message">
 
-                    <div className="input-group">
-                        <label>Preferred Style</label>
+                            <Sparkles size={16} />
 
-                        <input
-                            name="preferredStyle"
-                            value={form.preferredStyle}
-                            onChange={handleChange}
-                            placeholder="Modern and minimal"
-                        />
-                    </div>
+                            Your Brand Brain is saved for this account.
+
+                        </div>
+
+                    )}
 
 
-                    <div className="input-group">
-                        <label>Language</label>
+                    {/* ACTIONS */}
 
-                        <select
-                            name="preferredLanguage"
-                            value={form.preferredLanguage}
-                            onChange={handleChange}
+                    <div className="brand-brain-actions">
+
+
+                        <div className="save-info">
+
+                            <Sparkles size={17} />
+
+                            <span>
+
+                                {savedBrand
+                                    ? "These details are saved to your BrandAI account and can be updated anytime."
+                                    : "BrandAI will remember this information for your future campaigns."
+                                }
+
+                            </span>
+
+                        </div>
+
+
+                        <button
+                            type="submit"
+                            className="primary-btn"
                         >
-                            <option>English</option>
-                            <option>Hindi</option>
-                            <option>Marathi</option>
-                        </select>
+
+                            {savedBrand
+                                ? "Save Changes"
+                                : "Save Brand Brain"
+                            }
+
+                            <ArrowRight size={19} />
+
+                        </button>
+
                     </div>
 
-                </div>
+                </form>
 
-
-                <button
-                    className="primary-btn form-button"
-                    disabled={loading}
-                >
-
-                    <Save size={18} />
-
-                    {loading
-                        ? "Saving..."
-                        : "Save Brand Brain"
-                    }
-
-                </button>
-
-
-                {message && (
-                    <div className="success-message">
-                        {message}
-                    </div>
-                )}
-
-            </form>
+            </div>
 
         </main>
 
     );
+
 }
+
 
 export default BrandBrain;
