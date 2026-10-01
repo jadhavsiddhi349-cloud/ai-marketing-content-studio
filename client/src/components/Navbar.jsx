@@ -1,103 +1,171 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { Sparkles, LogOut, LayoutDashboard } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+    LayoutDashboard,
+    LogOut,
+    ArrowRight
+} from "lucide-react";
+
+import BrandLogo from "./BrandLogo";
 
 function Navbar() {
-
     const navigate = useNavigate();
+    const location = useLocation();
 
-    const [user, setUser] = useState(
-        JSON.parse(
-            localStorage.getItem("brandai_current_user") || "null"
-        )
+    const currentUser = JSON.parse(
+        localStorage.getItem("brandai_current_user") || "null"
     );
 
+    const isActive = (path) => {
+        return location.pathname === path;
+    };
+
     const handleLogout = () => {
-
-        localStorage.removeItem(
-            "brandai_current_user"
-        );
-
-        setUser(null);
-
-        navigate("/");
+        localStorage.removeItem("brandai_current_user");
+        navigate("/login");
     };
 
     return (
-        <header className="navbar">
+        <header className="brandai-navbar">
 
-            <div className="navbar-inner">
+            {/* Background glow */}
+            <div className="brandai-navbar-glow"></div>
 
-                {/* LOGO */}
+            <div className="brandai-navbar-inner">
+
+                {/* =================================================
+                    BRAND
+                ================================================= */}
 
                 <Link
                     to="/"
-                    className="navbar-logo"
+                    className="brandai-navbar-brand"
                 >
-                    <div className="logo-icon">
-                        <Sparkles size={20} />
-                    </div>
-
-                    <span>
-                        Brand<span>AI</span>
-                    </span>
+                      <BrandLogo />
                 </Link>
 
 
-                {/* CENTER NAVIGATION */}
+                {/* =================================================
+                    NAVIGATION
+                ================================================= */}
 
-                <nav className="navbar-links">
+                <nav className="brandai-navbar-nav">
 
-                    <Link to="/">
+                    <Link
+                        to="/"
+                        className={
+                            isActive("/")
+                                ? "brandai-nav-link active"
+                                : "brandai-nav-link"
+                        }
+                    >
                         Home
                     </Link>
 
-                    <a href="/#features">
+                    <a
+                        href="/#features"
+                        className="brandai-nav-link"
+                    >
                         Features
                     </a>
+
+                    {currentUser && (
+                        <Link
+                            to="/dashboard"
+                            className={
+                                isActive("/dashboard")
+                                    ? "brandai-nav-link active"
+                                    : "brandai-nav-link"
+                            }
+                        >
+                            <LayoutDashboard size={14} />
+                            Dashboard
+                        </Link>
+                    )}
 
                 </nav>
 
 
-                {/* RIGHT SIDE */}
+                {/* =================================================
+                    RIGHT SIDE
+                ================================================= */}
 
-                <div className="navbar-actions">
+                <div className="brandai-navbar-right">
 
-                    {user ? (
-
+                    {currentUser ? (
                         <>
-                            <Link
-                                to="/dashboard"
-                                className="navbar-dashboard"
+
+                            {/* User */}
+                            <div className="brandai-user">
+
+                                <div className="brandai-user-avatar">
+                                    {currentUser.name
+                                        ?.charAt(0)
+                                        .toUpperCase()}
+                                </div>
+
+                                <div className="brandai-user-details">
+
+                                    <span>
+                                        Welcome back
+                                    </span>
+
+                                    <strong>
+                                        {currentUser.name}
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+
+                            {/* Divider */}
+                            <div className="brandai-navbar-divider"></div>
+
+
+                            {/* Logout */}
+                            <button
+                                type="button"
+                                className="brandai-logout"
+                                onClick={handleLogout}
                             >
-                                <LayoutDashboard size={17} />
-                                Dashboard
+                                <LogOut size={14} />
+
+                                <span>
+                                    Logout
+                                </span>
+                            </button>
+
+                        </>
+                    ) : (
+                        <>
+
+                            {/* Login */}
+                            <Link
+                                to="/login"
+                                className="brandai-login"
+                            >
+                                Login
                             </Link>
 
-                            <button
-                                onClick={handleLogout}
-                                className="navbar-logout"
+
+                            {/* Get Started */}
+                            <Link
+                                to="/signup"
+                                className="brandai-get-started"
                             >
-                                <LogOut size={17} />
-                                Logout
-                            </button>
+                                <span>
+                                    Get Started
+                                </span>
+
+                                <ArrowRight size={14} />
+                            </Link>
+
                         </>
-
-                    ) : (
-
-                        <Link
-                            to="/login"
-                            className="navbar-signin"
-                        >
-                            Sign In
-                        </Link>
-
                     )}
 
                 </div>
 
             </div>
-
         </header>
     );
 }

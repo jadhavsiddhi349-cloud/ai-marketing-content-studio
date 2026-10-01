@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogIn, ArrowRight, Sparkles } from "lucide-react";
+import {
+    ArrowRight,
+    Eye,
+    EyeOff,
+    Lock,
+    Mail
+} from "lucide-react";
 
 function Login() {
     const navigate = useNavigate();
@@ -10,7 +16,9 @@ function Login() {
         password: ""
     });
 
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setForm({
@@ -18,16 +26,25 @@ function Login() {
             [e.target.name]: e.target.value
         });
 
-        setError("");
+        if (error) {
+            setError("");
+        }
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (!form.email || !form.password) {
+        setError("");
+
+        const email = form.email.trim().toLowerCase();
+        const password = form.password;
+
+        if (!email || !password) {
             setError("Please enter your email and password.");
             return;
         }
+
+        setLoading(true);
 
         const accounts = JSON.parse(
             localStorage.getItem("brandai_accounts") || "[]"
@@ -35,117 +52,184 @@ function Login() {
 
         const account = accounts.find(
             (item) =>
-                item.email.toLowerCase() ===
-                    form.email.toLowerCase() &&
-                item.password === form.password
+                item.email.toLowerCase() === email &&
+                item.password === password
         );
 
         if (!account) {
-            setError("Invalid email or password.");
+            setLoading(false);
+            setError(
+                "The email or password you entered is incorrect."
+            );
             return;
         }
 
+        const currentUser = {
+            id: account.id,
+            name: account.name,
+            email: account.email
+        };
+
         localStorage.setItem(
             "brandai_current_user",
-            JSON.stringify({
-                id: account.id,
-                name: account.name,
-                email: account.email
-            })
+            JSON.stringify(currentUser)
         );
+
+        setLoading(false);
 
         navigate("/dashboard");
     };
 
     return (
-        <main className="auth-page">
+        <main className="login-page">
 
-            <div className="auth-card">
+            <div className="login-card">
 
-                <div className="auth-icon">
-                    <LogIn size={28} />
-                </div>
-
-                <div className="auth-header">
-
-                    <div className="small-badge">
-                        <Sparkles size={14} />
-                        WELCOME BACK
-                    </div>
-
+                <div className="login-card-header">
                     <h1>
-                        Sign in to
-                        <span> BrandAI.</span>
+                        Welcome back
                     </h1>
 
                     <p>
-                        Continue building intelligent,
-                        brand-consistent campaigns.
+                        Sign in to continue to your BrandAI workspace.
                     </p>
-
                 </div>
 
-                {error && (
-                    <div className="auth-error">
-                        {error}
-                    </div>
-                )}
 
                 <form
-                    className="auth-form"
+                    className="login-form"
                     onSubmit={handleSubmit}
                 >
 
-                    <div className="form-group">
+                    {/* EMAIL */}
 
-                        <label>
-                            Email Address
+                    <div className="login-field">
+
+                        <label htmlFor="login-email">
+                            Email address
                         </label>
 
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="you@example.com"
-                            value={form.email}
-                            onChange={handleChange}
-                        />
+                        <div className="login-input-wrap">
+
+                            <Mail
+                                className="login-input-icon"
+                                size={17}
+                            />
+
+                            <input
+                                id="login-email"
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="you@example.com"
+                                autoComplete="email"
+                            />
+
+                        </div>
 
                     </div>
 
-                    <div className="form-group">
 
-                        <label>
+                    {/* PASSWORD */}
+
+                    <div className="login-field">
+
+                        <label htmlFor="login-password">
                             Password
                         </label>
 
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Enter your password"
-                            value={form.password}
-                            onChange={handleChange}
-                        />
+                        <div className="login-input-wrap">
+
+                            <Lock
+                                className="login-input-icon"
+                                size={17}
+                            />
+
+                            <input
+                                id="login-password"
+                                type={
+                                    showPassword
+                                        ? "text"
+                                        : "password"
+                                }
+                                name="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="Enter your password"
+                                autoComplete="current-password"
+                            />
+
+                            <button
+                                type="button"
+                                className="login-eye-button"
+                                onClick={() =>
+                                    setShowPassword(
+                                        (value) => !value
+                                    )
+                                }
+                                aria-label={
+                                    showPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={17} />
+                                ) : (
+                                    <Eye size={17} />
+                                )}
+                            </button>
+
+                        </div>
 
                     </div>
 
+
+                    {/* ERROR */}
+
+                    {error && (
+                        <div className="login-error">
+                            {error}
+                        </div>
+                    )}
+
+
+                    {/* SUBMIT */}
+
                     <button
                         type="submit"
-                        className="primary-btn auth-submit"
+                        className="login-submit"
+                        disabled={loading}
                     >
-                        Sign In
-                        <ArrowRight size={18} />
+                        {loading ? (
+                            <span>
+                                Signing in...
+                            </span>
+                        ) : (
+                            <>
+                                <span>
+                                    Sign in
+                                </span>
+
+                                <ArrowRight size={16} />
+                            </>
+                        )}
                     </button>
 
                 </form>
 
-                <div className="auth-footer">
 
-                    <p>
+                {/* SIGN UP */}
+
+                <div className="login-signup">
+
+                    <span>
                         Don't have an account?
-                    </p>
+                    </span>
 
                     <Link to="/signup">
-                        Create Account
+                        Create an account
                     </Link>
 
                 </div>

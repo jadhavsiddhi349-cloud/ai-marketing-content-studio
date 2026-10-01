@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { UserPlus, ArrowRight, Sparkles } from "lucide-react";
 
+import {
+    UserPlus,
+    ArrowRight,
+    Sparkles,
+    Eye,
+    EyeOff
+} from "lucide-react";
 
 function Signup() {
-
     const navigate = useNavigate();
 
     const [form, setForm] = useState({
@@ -16,27 +21,21 @@ function Signup() {
 
     const [error, setError] = useState("");
 
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] =
+        useState(false);
 
     const handleChange = (e) => {
-
         setForm({
             ...form,
             [e.target.name]: e.target.value
         });
-
     };
 
-
     const handleSubmit = (e) => {
-
         e.preventDefault();
 
         setError("");
-
-
-        /* =========================================
-           VALIDATION
-        ========================================= */
 
         if (
             !form.name.trim() ||
@@ -44,43 +43,30 @@ function Signup() {
             !form.password ||
             !form.confirmPassword
         ) {
-
             setError("Please fill in all fields.");
-
             return;
         }
 
-
         if (form.password.length < 6) {
-
             setError(
                 "Password must be at least 6 characters."
             );
-
             return;
         }
 
-
-        if (form.password !== form.confirmPassword) {
-
+        if (
+            form.password !==
+            form.confirmPassword
+        ) {
             setError("Passwords do not match.");
-
             return;
         }
-
-
-        /* =========================================
-           GET EXISTING ACCOUNTS
-        ========================================= */
 
         const accounts = JSON.parse(
-            localStorage.getItem("brandai_accounts") || "[]"
+            localStorage.getItem(
+                "brandai_accounts"
+            ) || "[]"
         );
-
-
-        /* =========================================
-           CHECK EXISTING EMAIL
-        ========================================= */
 
         const existingAccount = accounts.find(
             (account) =>
@@ -88,156 +74,104 @@ function Signup() {
                 form.email.trim().toLowerCase()
         );
 
-
         if (existingAccount) {
-
             setError(
                 "An account with this email already exists."
             );
-
             return;
         }
 
-
-        /* =========================================
-           CREATE ACCOUNT
-        ========================================= */
-
         const newAccount = {
-
             id: Date.now(),
-
             name: form.name.trim(),
-
-            email: form.email.trim().toLowerCase(),
-
+            email: form.email
+                .trim()
+                .toLowerCase(),
             password: form.password
-
         };
 
-
-        /* =========================================
-           SAVE ACCOUNT
-        ========================================= */
-
         accounts.push(newAccount);
-
 
         localStorage.setItem(
             "brandai_accounts",
             JSON.stringify(accounts)
         );
 
-
-        /* =========================================
-           CREATE LOGIN SESSION
-        ========================================= */
-
         const currentUser = {
-
             id: newAccount.id,
-
             name: newAccount.name,
-
             email: newAccount.email
-
         };
-
 
         localStorage.setItem(
             "brandai_current_user",
             JSON.stringify(currentUser)
         );
 
-
-        /* =========================================
-           GO TO BRAND BRAIN
-        ========================================= */
-
         navigate("/brand-brain");
-
     };
 
-
     return (
-
         <main className="auth-page">
+
+            <div className="auth-background-glow"></div>
 
             <div className="auth-card">
 
-
-                {/* =====================================
-                    ICON
-                ===================================== */}
-
-                <div className="auth-icon">
-
-                    <UserPlus size={28} />
-
-                </div>
-
-
-                {/* =====================================
+                {/* ================================
                     HEADER
-                ===================================== */}
+                ================================= */}
 
                 <div className="auth-header">
 
-                    <div className="small-badge">
-
-                        <Sparkles size={14} />
-
-                        BRANDAI
-
+                    <div className="auth-icon">
+                        <UserPlus size={21} />
                     </div>
 
+                    <div>
+                        <div className="auth-badge">
+                            <Sparkles size={12} />
+                            BRANDAI
+                        </div>
 
-                    <h1>
+                        <h1>
+                            Create your account
+                        </h1>
 
-                        Create your
-
-                        <span>
-                            {" "}account.
-                        </span>
-
-                    </h1>
-
-
-                    <p>
-
-                        Create your BrandAI account and start
-                        building AI-powered campaigns.
-
-                    </p>
+                        <p>
+                            Start building smarter campaigns
+                            with BrandAI.
+                        </p>
+                    </div>
 
                 </div>
 
 
-                {/* =====================================
+                {/* ================================
                     FORM
-                ===================================== */}
+                ================================= */}
 
                 <form
                     className="auth-form"
                     onSubmit={handleSubmit}
                 >
 
-
                     {/* NAME */}
 
-                    <div className="form-group">
+                    <div className="auth-field">
 
-                        <label>
+                        <label htmlFor="name">
                             Full Name
                         </label>
 
-
                         <input
-                            type="text"
+                            id="name"
                             name="name"
-                            placeholder="Enter your name"
+                            type="text"
                             value={form.name}
                             onChange={handleChange}
+                            placeholder="Enter your name"
+                            autoComplete="name"
                         />
 
                     </div>
@@ -245,19 +179,20 @@ function Signup() {
 
                     {/* EMAIL */}
 
-                    <div className="form-group">
+                    <div className="auth-field">
 
-                        <label>
-                            Email
+                        <label htmlFor="email">
+                            Email Address
                         </label>
 
-
                         <input
-                            type="email"
+                            id="email"
                             name="email"
-                            placeholder="you@example.com"
+                            type="email"
                             value={form.email}
                             onChange={handleChange}
+                            placeholder="Enter your email"
+                            autoComplete="email"
                         />
 
                     </div>
@@ -265,40 +200,102 @@ function Signup() {
 
                     {/* PASSWORD */}
 
-                    <div className="form-group">
+                    <div className="auth-field">
 
-                        <label>
+                        <label htmlFor="password">
                             Password
                         </label>
 
+                        <div className="password-input-wrapper">
 
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Create a password"
-                            value={form.password}
-                            onChange={handleChange}
-                        />
+                            <input
+                                id="password"
+                                name="password"
+                                type={
+                                    showPassword
+                                        ? "text"
+                                        : "password"
+                                }
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="Create a password"
+                                autoComplete="new-password"
+                            />
+
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() =>
+                                    setShowPassword(
+                                        !showPassword
+                                    )
+                                }
+                                aria-label={
+                                    showPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={17} />
+                                ) : (
+                                    <Eye size={17} />
+                                )}
+                            </button>
+
+                        </div>
 
                     </div>
 
 
                     {/* CONFIRM PASSWORD */}
 
-                    <div className="form-group">
+                    <div className="auth-field">
 
-                        <label>
+                        <label htmlFor="confirmPassword">
                             Confirm Password
                         </label>
 
+                        <div className="password-input-wrapper">
 
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            placeholder="Confirm your password"
-                            value={form.confirmPassword}
-                            onChange={handleChange}
-                        />
+                            <input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type={
+                                    showConfirmPassword
+                                        ? "text"
+                                        : "password"
+                                }
+                                value={
+                                    form.confirmPassword
+                                }
+                                onChange={handleChange}
+                                placeholder="Confirm your password"
+                                autoComplete="new-password"
+                            />
+
+                            <button
+                                type="button"
+                                className="password-toggle"
+                                onClick={() =>
+                                    setShowConfirmPassword(
+                                        !showConfirmPassword
+                                    )
+                                }
+                                aria-label={
+                                    showConfirmPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }
+                            >
+                                {showConfirmPassword ? (
+                                    <EyeOff size={17} />
+                                ) : (
+                                    <Eye size={17} />
+                                )}
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -306,13 +303,9 @@ function Signup() {
                     {/* ERROR */}
 
                     {error && (
-
                         <div className="auth-error">
-
                             {error}
-
                         </div>
-
                     )}
 
 
@@ -320,46 +313,38 @@ function Signup() {
 
                     <button
                         type="submit"
-                        className="primary-btn auth-submit"
+                        className="auth-submit"
                     >
+                        <span>
+                            Create Account
+                        </span>
 
-                        Create Account
-
-                        <ArrowRight size={18} />
-
+                        <ArrowRight size={16} />
                     </button>
-
 
                 </form>
 
 
-                {/* =====================================
-                    FOOTER
-                ===================================== */}
+                {/* ================================
+                    LOGIN LINK
+                ================================= */}
 
                 <div className="auth-footer">
 
-                    <p>
+                    <span>
                         Already have an account?
-                    </p>
-
+                    </span>
 
                     <Link to="/login">
-
-                        Sign In
-
+                        Login
                     </Link>
 
                 </div>
 
-
             </div>
 
         </main>
-
     );
-
 }
-
 
 export default Signup;

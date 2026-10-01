@@ -1,21 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import {
-    getBrands,
-    createCampaign
+    createCampaign,
+    getBrands
 } from "../services/api";
 
 import {
     Sparkles,
     Mail,
-    MessageCircle
+    MessageCircle,
+    Upload,
+    Image as ImageIcon,
+    X,
+    CheckCircle2
 } from "lucide-react";
 
-
 function CreateCampaign() {
-
     const navigate = useNavigate();
+    const fileInputRef = useRef(null);
+
+    const [currentUser, setCurrentUser] = useState(null);
 
     const [brands, setBrands] = useState([]);
 
@@ -30,619 +34,638 @@ function CreateCampaign() {
 
     const [platforms, setPlatforms] = useState([]);
 
+    const [productImage, setProductImage] = useState(null);
+    const [imagePreview, setImagePreview] = useState("");
+
     const [loading, setLoading] = useState(false);
-
-    const [message, setMessage] = useState("");
-
-
-    /* =========================================================
-       LOAD BRANDS
-    ========================================================= */
+    const [error, setError] = useState("");
 
     useEffect(() => {
-
-        const currentUser = JSON.parse(
+        const storedUser = JSON.parse(
             localStorage.getItem("brandai_current_user") || "null"
         );
 
-
-        if (!currentUser) {
-
+        if (!storedUser) {
             navigate("/login");
-
             return;
         }
 
+        setCurrentUser(storedUser);
 
         loadBrands();
-
     }, [navigate]);
 
-
-    /* =========================================================
-       LOAD BRANDS FROM BACKEND
-    ========================================================= */
-
     const loadBrands = async () => {
-
         try {
-
             const response = await getBrands();
 
-            setBrands(
-                response.data?.brands || []
+            const brandList = response.data || [];
+
+            setBrands(brandList);
+
+            if (brandList.length > 0) {
+                setForm((previous) => ({
+                    ...previous,
+                    brandId: brandList[0]._id
+                }));
+            }
+        } catch (err) {
+            console.error("Failed to load brands:", err);
+            setError(
+                "Unable to load your brand information. Please try again."
             );
-
-        } catch (error) {
-
-            console.log("Could not load brands:", error);
-
-            setBrands([]);
-
         }
-
     };
 
-
-    /* =========================================================
-       FORM CHANGE
-    ========================================================= */
-
     const handleChange = (e) => {
-
         setForm({
             ...form,
             [e.target.name]: e.target.value
         });
 
-    };
-
-
-    /* =========================================================
-       PLATFORM SELECTION
-    ========================================================= */
-
-    const handlePlatformChange = (platform) => {
-
-        if (platforms.includes(platform)) {
-
-            setPlatforms(
-                platforms.filter(
-                    item => item !== platform
-                )
-            );
-
-        } else {
-
-            setPlatforms([
-                ...platforms,
-                platform
-            ]);
-
+        if (error) {
+            setError("");
         }
-
     };
 
-
-    /* =========================================================
-       CREATE CAMPAIGN
-    ========================================================= */
-
-    const handleSubmit = async (e) => {
-
-        e.preventDefault();
-
-        setMessage("");
-
-
-        /* =====================================================
-           CHECK LOGIN
-        ===================================================== */
-
-        const currentUser = JSON.parse(
-            localStorage.getItem("brandai_current_user") || "null"
+    const togglePlatform = (platform) => {
+        setPlatforms((previous) =>
+            previous.includes(platform)
+                ? previous.filter((item) => item !== platform)
+                : [...previous, platform]
         );
 
+        if (error) {
+            setError("");
+        }
+    };
 
-        if (!currentUser) {
+    const handleImageChange = (e) => {
+        const file = e.target.files?.[0];
 
-            navigate("/login");
-
+        if (!file) {
             return;
         }
 
+        setError("");
 
-        /* =====================================================
-           CHECK PLATFORM
-        ===================================================== */
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        ];
 
-        if (platforms.length === 0) {
-
-            setMessage(
-                "Please select at least one platform."
+        if (!allowedTypes.includes(file.type)) {
+            setError(
+                "Please upload a JPG, PNG, or WEBP image."
             );
 
+            e.target.value = "";
             return;
         }
 
+        const maxSize = 5 * 1024 * 1024;
+
+        if (file.size > maxSize) {
+            setError(
+                "Product image must be smaller than 5 MB."
+            );
+
+            e.target.value = "";
+            return;
+        }
+
+        setProductImage(file);
+
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            setImagePreview(reader.result);
+        };
+
+        reader.readAsDataURL(file);
+    };
+
+    const removeProductImage = () => {
+        setProductImage(null);
+        setImagePreview("");
+
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        setError("");
+
+        if (!currentUser) {
+            navigate("/login");
+            return;
+        }
+
+        if (!form.brandId) {
+            setError(
+                "Please select a brand before creating the campaign."
+            );
+            return;
+        }
+
+        if (!form.campaignName.trim()) {
+            setError(
+                "Please enter a campaign name."
+            );
+            return;
+        }
+
+        if (!form.goal.trim()) {
+            setError(
+                "Please enter the campaign goal."
+            );
+            return;
+        }
+
+        if (!form.product.trim()) {
+            setError(
+                "Please enter the product or service."
+            );
+            return;
+        }
+
+        if (!form.audience.trim()) {
+            setError(
+                "Please enter your target audience."
+            );
+            return;
+        }
+
+        if (!form.tone) {
+            setError(
+                "Please select a content tone."
+            );
+            return;
+        }
+
+        if (platforms.length === 0) {
+            setError(
+                "Please select at least one platform."
+            );
+            return;
+        }
 
         setLoading(true);
 
-
         try {
-
-            /* =================================================
-               SEND CAMPAIGN TO BACKEND
-            ================================================= */
+            /*
+             * The current backend campaign API does not require
+             * the product image. We therefore keep the image on
+             * the frontend campaign record for now.
+             *
+             * Later, the image can be sent to an AI vision endpoint
+             * without changing this page structure.
+             */
 
             const response = await createCampaign({
-
-                ...form,
-
+                brandId: form.brandId,
+                campaignName: form.campaignName.trim(),
+                goal: form.goal.trim(),
+                product: form.product.trim(),
+                audience: form.audience.trim(),
+                tone: form.tone,
                 platforms
-
             });
 
-
-            const backendCampaign =
-                response.data?.campaign;
-
-
-            /* =================================================
-               GET CAMPAIGN ID
-            ================================================= */
+            const backendCampaign = response.data;
 
             const campaignId =
                 backendCampaign?._id ||
                 backendCampaign?.id ||
-                Date.now();
+                Date.now().toString();
 
-
-            /* =================================================
-               DETERMINE CONTENT COUNT
-            ================================================= */
-
-            let contentCount = 0;
-
-
-            if (
-                backendCampaign?.contentCount !== undefined
-            ) {
-
-                contentCount =
-                    Number(
-                        backendCampaign.contentCount
-                    );
-
-            } else if (
-                Array.isArray(
-                    backendCampaign?.content
-                )
-            ) {
-
-                contentCount =
-                    backendCampaign.content.length;
-
-            } else if (
-                backendCampaign?.content
-            ) {
-
-                contentCount = 1;
-
-            } else {
-
-                /*
-                 * Each selected platform represents
-                 * one initial content piece.
-                 */
-
-                contentCount = platforms.length;
-
-            }
-
-
-            /* =================================================
-               CREATE LOCAL CAMPAIGN RECORD
-            ================================================= */
-
-            const localCampaign = {
-
-                id: campaignId,
-
-                _id: campaignId,
-
-                campaignName:
-                    form.campaignName,
-
-                goal:
-                    form.goal,
-
-                product:
-                    form.product,
-
-                audience:
-                    form.audience,
-
-                tone:
-                    form.tone,
-
-                brandId:
-                    form.brandId,
-
-                platforms:
-                    platforms,
-
-                contentCount:
-                    contentCount,
-
-                status:
-                    backendCampaign?.status ||
-                    "generated",
-
-                approved:
-                    backendCampaign?.approved ||
-                    false,
-
-                createdAt:
-                    backendCampaign?.createdAt ||
-                    new Date().toISOString()
-
-            };
-
-
-            /* =================================================
-               LOAD EXISTING USER CAMPAIGNS
-            ================================================= */
+            /*
+             * Save a frontend campaign record for the current user.
+             * This allows Dashboard and other frontend pages to show
+             * the campaign and product image.
+             */
 
             const campaignStorageKey =
                 `brandai_campaigns_${currentUser.id}`;
 
+            const existingCampaigns = JSON.parse(
+                localStorage.getItem(campaignStorageKey) || "[]"
+            );
 
-            const existingCampaigns =
-                JSON.parse(
-                    localStorage.getItem(
-                        campaignStorageKey
-                    ) || "[]"
-                );
+            const localCampaign = {
+                id: campaignId,
+                _id: campaignId,
+                brandId: form.brandId,
 
+                campaignName: form.campaignName.trim(),
+                goal: form.goal.trim(),
+                product: form.product.trim(),
+                audience: form.audience.trim(),
+                tone: form.tone,
 
-            /* =================================================
-               SAVE CAMPAIGN
-            ================================================= */
+                platforms: [...platforms],
 
-            const updatedCampaigns = [
+                status: "draft",
+                approved: false,
 
-                localCampaign,
+                contentCount: 0,
 
-                ...existingCampaigns
+                productImage: imagePreview || null,
 
-            ];
+                productImageName:
+                    productImage?.name || null,
 
+                productImageType:
+                    productImage?.type || null,
+
+                createdAt: new Date().toISOString(),
+
+                updatedAt: new Date().toISOString()
+            };
+
+            existingCampaigns.unshift(localCampaign);
 
             localStorage.setItem(
                 campaignStorageKey,
-                JSON.stringify(updatedCampaigns)
+                JSON.stringify(existingCampaigns)
             );
 
-
-            /* =================================================
-               CREATE RECENT ACTIVITY
-            ================================================= */
+            /*
+             * Add dashboard activity.
+             */
 
             const activityStorageKey =
                 `brandai_activity_${currentUser.id}`;
 
+            const existingActivities = JSON.parse(
+                localStorage.getItem(activityStorageKey) || "[]"
+            );
 
-            const existingActivities =
-                JSON.parse(
-                    localStorage.getItem(
-                        activityStorageKey
-                    ) || "[]"
-                );
-
-
-            const campaignActivity = {
-
-                id:
-                    `campaign-${campaignId}-${Date.now()}`,
-
-                type:
-                    "campaign",
-
-                title:
-                    "Campaign generated",
-
+            existingActivities.unshift({
+                id: Date.now(),
+                type: "campaign",
+                title: "Campaign created",
                 description:
-                    form.campaignName,
-
-                campaignId:
-                    campaignId,
-
-                createdAt:
-                    new Date().toISOString()
-
-            };
-
-
-            const contentActivity = {
-
-                id:
-                    `content-${campaignId}-${Date.now()}`,
-
-                type:
-                    "content",
-
-                title:
-                    "Content generated",
-
-                description:
-                    `${platforms.length} platform${
-                        platforms.length === 1
-                            ? ""
-                            : "s"
-                    } selected`,
-
-                campaignId:
-                    campaignId,
-
-                createdAt:
-                    new Date().toISOString()
-
-            };
-
-
-            const updatedActivities = [
-
-                contentActivity,
-
-                campaignActivity,
-
-                ...existingActivities
-
-            ].slice(0, 20);
-
+                    `${form.campaignName.trim()} was created.`,
+                createdAt: new Date().toISOString()
+            });
 
             localStorage.setItem(
                 activityStorageKey,
-                JSON.stringify(updatedActivities)
+                JSON.stringify(
+                    existingActivities.slice(0, 20)
+                )
             );
 
-
-            /* =================================================
-               TELL DASHBOARD TO REFRESH
-            ================================================= */
+            /*
+             * Tell the dashboard to refresh.
+             */
 
             window.dispatchEvent(
                 new Event("brandai-dashboard-update")
             );
 
+            navigate(`/campaign/${campaignId}`);
 
-            /* =================================================
-               OPEN CAMPAIGN DETAILS
-            ================================================= */
-
-            navigate(
-                `/campaign/${campaignId}`
+        } catch (err) {
+            console.error(
+                "Campaign creation failed:",
+                err
             );
 
-
-        } catch (error) {
-
-            console.log(
-                "Campaign generation error:",
-                error
+            setError(
+                err?.response?.data?.message ||
+                "Something went wrong while creating the campaign. Please try again."
             );
-
-
-            setMessage(
-
-                error.response?.data?.message ||
-
-                "Campaign generation failed. Please try again."
-
-            );
-
         } finally {
-
             setLoading(false);
-
         }
-
     };
 
-
     return (
-
         <main className="app-page">
 
-
-            {/* =================================================
-                PAGE HEADING
-            ================================================= */}
+            {/* PAGE HEADER */}
 
             <div className="page-heading">
 
                 <div className="small-badge">
-
-                    <Sparkles size={14} />
-
-                    AI CAMPAIGN GENERATOR
-
+                    <Sparkles size={12} />
+                    CAMPAIGN WORKSPACE
                 </div>
 
-
                 <h1>
-                    Create your <span>campaign.</span>
+                    Create your next{" "}
+                    <span>campaign.</span>
                 </h1>
 
-
                 <p>
-                    One brief. Multiple platforms.
-                    Complete campaign.
+                    Define your campaign, add your product,
+                    upload a product image, and choose where
+                    your content will be published.
                 </p>
 
             </div>
 
 
-            {/* =================================================
-                FORM
-            ================================================= */}
+            {/* FORM */}
 
             <form
                 className="glass-form"
                 onSubmit={handleSubmit}
             >
 
-
                 <div className="form-grid">
 
+                    {/* BRAND */}
 
-                    {/* =================================================
-                        BRAND
-                    ================================================= */}
+                    <div className="input-group">
 
-                    <div className="input-group full">
-
-                        <label>
-                            Select Brand
+                        <label htmlFor="brandId">
+                            Brand
                         </label>
 
-
                         <select
+                            id="brandId"
                             name="brandId"
                             value={form.brandId}
                             onChange={handleChange}
-                            required
                         >
-
                             <option value="">
-                                Select your Brand Brain
+                                Select your brand
                             </option>
 
-
-                            {brands.map(
-                                (brand) => (
-
-                                    <option
-                                        key={brand._id}
-                                        value={brand._id}
-                                    >
-                                        {brand.brandName}
-                                    </option>
-
-                                )
-                            )}
-
+                            {brands.map((brand) => (
+                                <option
+                                    key={brand._id}
+                                    value={brand._id}
+                                >
+                                    {brand.name}
+                                </option>
+                            ))}
                         </select>
 
                     </div>
 
 
-                    {/* =================================================
-                        CAMPAIGN NAME
-                    ================================================= */}
+                    {/* CAMPAIGN NAME */}
 
                     <div className="input-group">
 
-                        <label>
-                            Campaign Name
+                        <label htmlFor="campaignName">
+                            Campaign name
                         </label>
 
-
                         <input
+                            id="campaignName"
+                            type="text"
                             name="campaignName"
                             value={form.campaignName}
                             onChange={handleChange}
-                            placeholder="Summer Launch"
-                            required
+                            placeholder="e.g. Summer Launch Campaign"
                         />
 
                     </div>
 
 
-                    {/* =================================================
-                        GOAL
-                    ================================================= */}
-
-                    <div className="input-group">
-
-                        <label>
-                            Campaign Goal
-                        </label>
-
-
-                        <input
-                            name="goal"
-                            value={form.goal}
-                            onChange={handleChange}
-                            placeholder="Increase product awareness"
-                            required
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        PRODUCT
-                    ================================================= */}
-
-                    <div className="input-group">
-
-                        <label>
-                            Product
-                        </label>
-
-
-                        <input
-                            name="product"
-                            value={form.product}
-                            onChange={handleChange}
-                            placeholder="Protein Bowl"
-                            required
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        AUDIENCE
-                    ================================================= */}
-
-                    <div className="input-group">
-
-                        <label>
-                            Target Audience
-                        </label>
-
-
-                        <input
-                            name="audience"
-                            value={form.audience}
-                            onChange={handleChange}
-                            placeholder="College students"
-                            required
-                        />
-
-                    </div>
-
-
-                    {/* =================================================
-                        TONE
-                    ================================================= */}
+                    {/* GOAL */}
 
                     <div className="input-group full">
 
-                        <label>
-                            Campaign Tone
+                        <label htmlFor="goal">
+                            Campaign goal
                         </label>
 
+                        <input
+                            id="goal"
+                            type="text"
+                            name="goal"
+                            value={form.goal}
+                            onChange={handleChange}
+                            placeholder="e.g. Increase product awareness and generate sales"
+                        />
+
+                    </div>
+
+
+                    {/* PRODUCT */}
+
+                    <div className="input-group">
+
+                        <label htmlFor="product">
+                            Product or service
+                        </label>
 
                         <input
+                            id="product"
+                            type="text"
+                            name="product"
+                            value={form.product}
+                            onChange={handleChange}
+                            placeholder="e.g. Organic Face Serum"
+                        />
+
+                    </div>
+
+
+                    {/* AUDIENCE */}
+
+                    <div className="input-group">
+
+                        <label htmlFor="audience">
+                            Target audience
+                        </label>
+
+                        <input
+                            id="audience"
+                            type="text"
+                            name="audience"
+                            value={form.audience}
+                            onChange={handleChange}
+                            placeholder="e.g. Women aged 20–35"
+                        />
+
+                    </div>
+
+
+                    {/* TONE */}
+
+                    <div className="input-group full">
+
+                        <label htmlFor="tone">
+                            Content tone
+                        </label>
+
+                        <select
+                            id="tone"
                             name="tone"
                             value={form.tone}
                             onChange={handleChange}
-                            placeholder="Friendly and energetic"
-                            required
+                        >
+                            <option value="">
+                                Select a tone
+                            </option>
+
+                            <option value="Professional">
+                                Professional
+                            </option>
+
+                            <option value="Friendly">
+                                Friendly
+                            </option>
+
+                            <option value="Bold">
+                                Bold
+                            </option>
+
+                            <option value="Luxury">
+                                Luxury
+                            </option>
+
+                            <option value="Playful">
+                                Playful
+                            </option>
+
+                            <option value="Minimal">
+                                Minimal
+                            </option>
+                        </select>
+
+                    </div>
+
+
+                    {/* PRODUCT IMAGE */}
+
+                    <div className="input-group full">
+
+                        <div className="product-image-heading">
+
+                            <div>
+                                <label>
+                                    Product image
+                                </label>
+
+                                <p>
+                                    Upload an image of your product
+                                    for AI-powered campaign understanding.
+                                </p>
+                            </div>
+
+                            <span className="product-image-ai-badge">
+                                <Sparkles size={11} />
+                                AI READY
+                            </span>
+
+                        </div>
+
+
+                        {!imagePreview ? (
+
+                            <button
+                                type="button"
+                                className="product-upload-area"
+                                onClick={handleUploadClick}
+                            >
+
+                                <div className="product-upload-icon">
+                                    <Upload size={21} />
+                                </div>
+
+                                <div className="product-upload-content">
+
+                                    <strong>
+                                        Upload product image
+                                    </strong>
+
+                                    <span>
+                                        Click to browse from your computer
+                                    </span>
+
+                                    <small>
+                                        JPG, PNG or WEBP · Maximum 5 MB
+                                    </small>
+
+                                </div>
+
+                                <div className="product-upload-action">
+                                    Choose image
+                                </div>
+
+                            </button>
+
+                        ) : (
+
+                            <div className="product-image-preview">
+
+                                <div className="product-image-preview-media">
+
+                                    <img
+                                        src={imagePreview}
+                                        alt="Product preview"
+                                    />
+
+                                </div>
+
+                                <div className="product-image-preview-info">
+
+                                    <div className="product-image-success">
+
+                                        <div className="product-image-success-icon">
+                                            <CheckCircle2 size={15} />
+                                        </div>
+
+                                        <div>
+                                            <strong>
+                                                Product image uploaded
+                                            </strong>
+
+                                            <span>
+                                                {productImage?.name}
+                                            </span>
+                                        </div>
+
+                                    </div>
+
+                                    <div className="product-image-preview-actions">
+
+                                        <button
+                                            type="button"
+                                            onClick={handleUploadClick}
+                                        >
+                                            Replace image
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="product-image-remove"
+                                            onClick={removeProductImage}
+                                        >
+                                            <X size={14} />
+                                            Remove
+                                        </button>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        )}
+
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={handleImageChange}
+                            className="product-image-file-input"
                         />
 
                     </div>
@@ -650,184 +673,143 @@ function CreateCampaign() {
                 </div>
 
 
-                {/* =================================================
-                    PLATFORMS
-                ================================================= */}
+                {/* PLATFORM */}
 
-                <h3 className="platform-heading">
-                    Select Platforms
-                </h3>
-
+                <div className="platform-heading">
+                    Where do you want to publish?
+                </div>
 
                 <div className="platform-select">
 
-
-                    <Platform
-                        name="Instagram"
-                        icon={<span>◎</span>}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("Instagram")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "Instagram"
-                            )
+                            togglePlatform("Instagram")
                         }
-                    />
+                    >
+                        <span>◎</span>
+                        <span>Instagram</span>
+                    </button>
 
 
-                    <Platform
-                        name="Facebook"
-                        icon={<span>f</span>}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("Facebook")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "Facebook"
-                            )
+                            togglePlatform("Facebook")
                         }
-                    />
+                    >
+                        <span>f</span>
+                        <span>Facebook</span>
+                    </button>
 
 
-                    <Platform
-                        name="LinkedIn"
-                        icon={<span>in</span>}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("LinkedIn")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "LinkedIn"
-                            )
+                            togglePlatform("LinkedIn")
                         }
-                    />
+                    >
+                        <span>in</span>
+                        <span>LinkedIn</span>
+                    </button>
 
 
-                    <Platform
-                        name="YouTube"
-                        icon={<span>▶</span>}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("YouTube")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "YouTube"
-                            )
+                            togglePlatform("YouTube")
                         }
-                    />
+                    >
+                        <span>▶</span>
+                        <span>YouTube</span>
+                    </button>
 
 
-                    <Platform
-                        name="WhatsApp"
-                        icon={<MessageCircle />}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("WhatsApp")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "WhatsApp"
-                            )
+                            togglePlatform("WhatsApp")
                         }
-                    />
+                    >
+                        <MessageCircle size={22} />
+                        <span>WhatsApp</span>
+                    </button>
 
 
-                    <Platform
-                        name="Email"
-                        icon={<Mail />}
-                        selected={
+                    <button
+                        type="button"
+                        className={
                             platforms.includes("Email")
+                                ? "platform-choice selected"
+                                : "platform-choice"
                         }
                         onClick={() =>
-                            handlePlatformChange(
-                                "Email"
-                            )
+                            togglePlatform("Email")
                         }
-                    />
+                    >
+                        <Mail size={22} />
+                        <span>Email</span>
+                    </button>
 
                 </div>
 
 
-                {/* =================================================
-                    GENERATE BUTTON
-                ================================================= */}
+                {/* SUBMIT */}
 
                 <button
-                    className="primary-btn form-button"
+                    type="submit"
+                    className="form-button"
                     disabled={loading}
                 >
-
-                    <Sparkles size={18} />
-
-
-                    {loading
-
-                        ? "Generating..."
-
-                        : "Generate Complete Campaign"
-
-                    }
-
+                    {loading ? (
+                        <>
+                            <Sparkles size={16} />
+                            Creating campaign...
+                        </>
+                    ) : (
+                        <>
+                            <Sparkles size={16} />
+                            Generate Campaign
+                        </>
+                    )}
                 </button>
 
 
-                {/* =================================================
-                    ERROR MESSAGE
-                ================================================= */}
-
-                {message && (
-
+                {error && (
                     <div className="error-message">
-
-                        {message}
-
+                        {error}
                     </div>
-
                 )}
 
             </form>
 
         </main>
-
     );
-
 }
-
-
-/* =========================================================
-   PLATFORM COMPONENT
-========================================================= */
-
-function Platform({
-    name,
-    icon,
-    selected,
-    onClick
-}) {
-
-    return (
-
-        <button
-            type="button"
-            className={
-                selected
-                    ? "platform-choice selected"
-                    : "platform-choice"
-            }
-            onClick={onClick}
-        >
-
-            {icon}
-
-            <span>
-                {name}
-            </span>
-
-        </button>
-
-    );
-
-}
-
 
 export default CreateCampaign;
