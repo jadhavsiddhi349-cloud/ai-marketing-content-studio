@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+// import BrandLogo from "./BrandLogo";
+import BrandLogo from "../components/BrandLogo";
+
 
 import {
     Home,
@@ -9,10 +12,10 @@ import {
     ShieldCheck,
     MessageSquare,
     Settings,
+    Sparkles,
     LogOut,
     ChevronRight,
     Activity,
-    Sparkles,
     Users,
     Package,
     TrendingUp,
@@ -343,60 +346,44 @@ function Dashboard() {
 
             <header className="dashboard-header">
 
-                <div className="dashboard-brand">
+    {/* <div className="dashboard-brand">
 
-                    <div className="dashboard-logo">
+        <div className="brandai-logo-mark">
+            <span>B</span>
+        </div>
 
-                        <Sparkles size={25} />
-
-                    </div>
-
-
-                    <div className="dashboard-brand-name">
-
-                        <span>
-                            Brand
-                        </span>
-
-                        <strong>
-                            AI
-                        </strong>
-
-                    </div>
+        <div className="brandai-logo-text">
+            Brand<span>AI</span>
+        </div>
 
 
-                    <div className="dashboard-divider" />
+        <div className="dashboard-brand">
+    <BrandLogo />
+</div>
+    </div> */}
+    <div className="dashboard-brand">
+    <BrandLogo />
+</div>
+   
+       
 
+    <div className="dashboard-user-area">
 
-                    <p>
-                        Smarter Campaigns. Stronger Brands.
-                    </p>
+        <div className="user-profile">
 
-                </div>
+            <div className="user-avatar">
+                {initials}
+            </div>
 
+            <div className="user-name">
+                {user.name}
+            </div>
 
-                <div className="dashboard-user-area">
+        </div>
 
-                   
+    </div>
 
-
-                    <div className="user-profile">
-
-                        <div className="user-avatar">
-                            {initials}
-                        </div>
-
-                        <div className="user-name">
-                            {user.name}
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </header>
-
-
+</header>
             {/* =================================================
                 DASHBOARD LAYOUT
             ================================================= */}

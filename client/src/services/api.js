@@ -61,5 +61,11 @@ export const approveCampaign = (id) => {
 export const qualityCheck = (id) => {
     return API.post(`/quality/${id}`);
 };
+// ====================
+// AI ASSISTANT
+// ====================
 
+export const chatWithAssistant = (data) => {
+    return API.post("/assistant/chat", data);
+};
 export default API;

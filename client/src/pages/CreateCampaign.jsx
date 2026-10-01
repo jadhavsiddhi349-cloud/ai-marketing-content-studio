@@ -56,25 +56,21 @@ function CreateCampaign() {
     }, [navigate]);
 
     const loadBrands = async () => {
-        try {
-            const response = await getBrands();
+    try {
+        const response = await getBrands();
 
-            const brandList = response.data || [];
+        console.log("Brands API response:", response.data);
 
-            setBrands(brandList);
+        const brandsData = Array.isArray(response.data)
+            ? response.data
+            : response.data?.brands || [];
 
-            if (brandList.length > 0) {
-                setForm((previous) => ({
-                    ...previous,
-                    brandId: brandList[0]._id
-                }));
-            }
-        } catch (err) {
-            console.error("Failed to load brands:", err);
-            setError(
-                "Unable to load your brand information. Please try again."
-            );
-        }
+        setBrands(brandsData);
+
+    } catch (error) {
+        console.log("Could not load brands:", error);
+        setBrands([]);
+    }
     };
 
     const handleChange = (e) => {

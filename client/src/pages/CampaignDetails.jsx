@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
     getCampaign,
@@ -16,6 +17,7 @@ import {
 function CampaignDetails() {
 
     const { id } = useParams();
+    const navigate = useNavigate();
 
     const [campaign, setCampaign] = useState(null);
 
@@ -63,15 +65,13 @@ function CampaignDetails() {
 
 
     const handleApprove = async () => {
-
         await approveCampaign(id);
 
         await loadCampaign();
 
-        setMessage(
-            "Campaign approved successfully!"
-        );
+        setMessage("Campaign approved successfully!");
 
+        navigate("/dashboard");
     };
 
 

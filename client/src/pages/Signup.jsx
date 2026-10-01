@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
 import {
-    UserPlus,
     ArrowRight,
-    Sparkles,
     Eye,
-    EyeOff
+    EyeOff,
+    Lock,
+    Mail,
+    User
 } from "lucide-react";
 
 function Signup() {
@@ -19,17 +19,22 @@ function Signup() {
         confirmPassword: ""
     });
 
-    const [error, setError] = useState("");
-
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] =
         useState(false);
+
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (e) => {
         setForm({
             ...form,
             [e.target.name]: e.target.value
         });
+
+        if (error) {
+            setError("");
+        }
     };
 
     const handleSubmit = (e) => {
@@ -37,9 +42,12 @@ function Signup() {
 
         setError("");
 
+        const name = form.name.trim();
+        const email = form.email.trim().toLowerCase();
+
         if (
-            !form.name.trim() ||
-            !form.email.trim() ||
+            !name ||
+            !email ||
             !form.password ||
             !form.confirmPassword
         ) {
@@ -54,27 +62,24 @@ function Signup() {
             return;
         }
 
-        if (
-            form.password !==
-            form.confirmPassword
-        ) {
+        if (form.password !== form.confirmPassword) {
             setError("Passwords do not match.");
             return;
         }
 
+        setLoading(true);
+
         const accounts = JSON.parse(
-            localStorage.getItem(
-                "brandai_accounts"
-            ) || "[]"
+            localStorage.getItem("brandai_accounts") || "[]"
         );
 
         const existingAccount = accounts.find(
             (account) =>
-                account.email.toLowerCase() ===
-                form.email.trim().toLowerCase()
+                account.email.toLowerCase() === email
         );
 
         if (existingAccount) {
+            setLoading(false);
             setError(
                 "An account with this email already exists."
             );
@@ -83,10 +88,8 @@ function Signup() {
 
         const newAccount = {
             id: Date.now(),
-            name: form.name.trim(),
-            email: form.email
-                .trim()
-                .toLowerCase(),
+            name,
+            email,
             password: form.password
         };
 
@@ -108,240 +111,272 @@ function Signup() {
             JSON.stringify(currentUser)
         );
 
+        setLoading(false);
+
         navigate("/brand-brain");
     };
 
     return (
-        <main className="auth-page">
+        <main className="signup-page">
 
-            <div className="auth-background-glow"></div>
+            {/* Background */}
+            <div className="signup-bg-glow signup-bg-glow-one"></div>
+            <div className="signup-bg-glow signup-bg-glow-two"></div>
 
-            <div className="auth-card">
+            {/* Main content */}
+            <section className="signup-content">
 
-                {/* ================================
-                    HEADER
-                ================================= */}
+                <div className="signup-heading">
 
-                <div className="auth-header">
+                    <span className="signup-overline">
+                        BRAND WORKSPACE
+                    </span>
 
-                    <div className="auth-icon">
-                        <UserPlus size={21} />
-                    </div>
+                    <h1>
+                        Create your
+                        <span> BrandAI account.</span>
+                    </h1>
 
-                    <div>
-                        <div className="auth-badge">
-                            <Sparkles size={12} />
-                            BRANDAI
-                        </div>
-
-                        <h1>
-                            Create your account
-                        </h1>
-
-                        <p>
-                            Start building smarter campaigns
-                            with BrandAI.
-                        </p>
-                    </div>
+                    <p>
+                        Set up your workspace and start building
+                        smarter, brand-consistent campaigns.
+                    </p>
 
                 </div>
 
+                <div className="signup-card">
 
-                {/* ================================
-                    FORM
-                ================================= */}
-
-                <form
-                    className="auth-form"
-                    onSubmit={handleSubmit}
-                >
-
-                    {/* NAME */}
-
-                    <div className="auth-field">
-
-                        <label htmlFor="name">
-                            Full Name
-                        </label>
-
-                        <input
-                            id="name"
-                            name="name"
-                            type="text"
-                            value={form.name}
-                            onChange={handleChange}
-                            placeholder="Enter your name"
-                            autoComplete="name"
-                        />
-
-                    </div>
-
-
-                    {/* EMAIL */}
-
-                    <div className="auth-field">
-
-                        <label htmlFor="email">
-                            Email Address
-                        </label>
-
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="Enter your email"
-                            autoComplete="email"
-                        />
-
-                    </div>
-
-
-                    {/* PASSWORD */}
-
-                    <div className="auth-field">
-
-                        <label htmlFor="password">
-                            Password
-                        </label>
-
-                        <div className="password-input-wrapper">
-
-                            <input
-                                id="password"
-                                name="password"
-                                type={
-                                    showPassword
-                                        ? "text"
-                                        : "password"
-                                }
-                                value={form.password}
-                                onChange={handleChange}
-                                placeholder="Create a password"
-                                autoComplete="new-password"
-                            />
-
-                            <button
-                                type="button"
-                                className="password-toggle"
-                                onClick={() =>
-                                    setShowPassword(
-                                        !showPassword
-                                    )
-                                }
-                                aria-label={
-                                    showPassword
-                                        ? "Hide password"
-                                        : "Show password"
-                                }
-                            >
-                                {showPassword ? (
-                                    <EyeOff size={17} />
-                                ) : (
-                                    <Eye size={17} />
-                                )}
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* CONFIRM PASSWORD */}
-
-                    <div className="auth-field">
-
-                        <label htmlFor="confirmPassword">
-                            Confirm Password
-                        </label>
-
-                        <div className="password-input-wrapper">
-
-                            <input
-                                id="confirmPassword"
-                                name="confirmPassword"
-                                type={
-                                    showConfirmPassword
-                                        ? "text"
-                                        : "password"
-                                }
-                                value={
-                                    form.confirmPassword
-                                }
-                                onChange={handleChange}
-                                placeholder="Confirm your password"
-                                autoComplete="new-password"
-                            />
-
-                            <button
-                                type="button"
-                                className="password-toggle"
-                                onClick={() =>
-                                    setShowConfirmPassword(
-                                        !showConfirmPassword
-                                    )
-                                }
-                                aria-label={
-                                    showConfirmPassword
-                                        ? "Hide password"
-                                        : "Show password"
-                                }
-                            >
-                                {showConfirmPassword ? (
-                                    <EyeOff size={17} />
-                                ) : (
-                                    <Eye size={17} />
-                                )}
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    {/* ERROR */}
-
-                    {error && (
-                        <div className="auth-error">
-                            {error}
-                        </div>
-                    )}
-
-
-                    {/* SUBMIT */}
-
-                    <button
-                        type="submit"
-                        className="auth-submit"
+                    <form
+                        className="signup-form"
+                        onSubmit={handleSubmit}
                     >
-                        <span>
-                            Create Account
-                        </span>
 
-                        <ArrowRight size={16} />
-                    </button>
+                        <div className="signup-field">
+                            <label htmlFor="signup-name">
+                                Full name
+                            </label>
 
-                </form>
+                            <div className="signup-input-wrap">
+
+                                <User
+                                    size={17}
+                                    className="signup-input-icon"
+                                />
+
+                                <input
+                                    id="signup-name"
+                                    type="text"
+                                    name="name"
+                                    value={form.name}
+                                    onChange={handleChange}
+                                    placeholder="Enter your full name"
+                                    autoComplete="name"
+                                />
+
+                            </div>
+                        </div>
 
 
-                {/* ================================
-                    LOGIN LINK
-                ================================= */}
+                        <div className="signup-field">
+                            <label htmlFor="signup-email">
+                                Email address
+                            </label>
 
-                <div className="auth-footer">
+                            <div className="signup-input-wrap">
 
-                    <span>
-                        Already have an account?
-                    </span>
+                                <Mail
+                                    size={17}
+                                    className="signup-input-icon"
+                                />
 
-                    <Link to="/login">
-                        Login
+                                <input
+                                    id="signup-email"
+                                    type="email"
+                                    name="email"
+                                    value={form.email}
+                                    onChange={handleChange}
+                                    placeholder="you@example.com"
+                                    autoComplete="email"
+                                />
+
+                            </div>
+                        </div>
+
+
+                        <div className="signup-field">
+                            <label htmlFor="signup-password">
+                                Password
+                            </label>
+
+                            <div className="signup-input-wrap">
+
+                                <Lock
+                                    size={17}
+                                    className="signup-input-icon"
+                                />
+
+                                <input
+                                    id="signup-password"
+                                    type={
+                                        showPassword
+                                            ? "text"
+                                            : "password"
+                                    }
+                                    name="password"
+                                    value={form.password}
+                                    onChange={handleChange}
+                                    placeholder="Create a password"
+                                    autoComplete="new-password"
+                                />
+
+                                <button
+                                    type="button"
+                                    className="signup-password-toggle"
+                                    onClick={() =>
+                                        setShowPassword(
+                                            (value) => !value
+                                        )
+                                    }
+                                    aria-label={
+                                        showPassword
+                                            ? "Hide password"
+                                            : "Show password"
+                                    }
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={17} />
+                                    ) : (
+                                        <Eye size={17} />
+                                    )}
+                                </button>
+
+                            </div>
+                        </div>
+
+
+                        <div className="signup-field">
+                            <label htmlFor="signup-confirm-password">
+                                Confirm password
+                            </label>
+
+                            <div className="signup-input-wrap">
+
+                                <Lock
+                                    size={17}
+                                    className="signup-input-icon"
+                                />
+
+                                <input
+                                    id="signup-confirm-password"
+                                    type={
+                                        showConfirmPassword
+                                            ? "text"
+                                            : "password"
+                                    }
+                                    name="confirmPassword"
+                                    value={form.confirmPassword}
+                                    onChange={handleChange}
+                                    placeholder="Confirm your password"
+                                    autoComplete="new-password"
+                                />
+
+                                <button
+                                    type="button"
+                                    className="signup-password-toggle"
+                                    onClick={() =>
+                                        setShowConfirmPassword(
+                                            (value) => !value
+                                        )
+                                    }
+                                    aria-label={
+                                        showConfirmPassword
+                                            ? "Hide password"
+                                            : "Show password"
+                                    }
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff size={17} />
+                                    ) : (
+                                        <Eye size={17} />
+                                    )}
+                                </button>
+
+                            </div>
+                        </div>
+
+
+                        <div className="signup-password-note">
+                            <span className="signup-note-dot"></span>
+
+                            Use at least 6 characters for your password.
+                        </div>
+
+
+                        {error && (
+                            <div
+                                className="signup-error"
+                                role="alert"
+                            >
+                                {error}
+                            </div>
+                        )}
+
+
+                        <button
+                            type="submit"
+                            className="signup-submit"
+                            disabled={loading}
+                        >
+
+                            {loading ? (
+                                <span>
+                                    Creating your account...
+                                </span>
+                            ) : (
+                                <>
+                                    <span>
+                                        Create account
+                                    </span>
+
+                                    <span className="signup-submit-icon">
+                                        <ArrowRight size={16} />
+                                    </span>
+                                </>
+                            )}
+
+                        </button>
+
+                    </form>
+
+
+                    <div className="signup-divider">
+                        <span></span>
+
+                        <p>
+                            Already have an account?
+                        </p>
+
+                        <span></span>
+                    </div>
+
+
+                    <Link
+                        to="/login"
+                        className="signup-login-link"
+                    >
+                        Sign in to BrandAI
+
+                        <ArrowRight size={15} />
                     </Link>
 
                 </div>
 
-            </div>
+
+                <p className="signup-bottom-text">
+                    Your workspace. Your brand. Your campaigns.
+                </p>
+
+            </section>
 
         </main>
     );

@@ -86,27 +86,97 @@ function AIAssistant() {
        SEND MESSAGE
     ========================================================= */
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
 
-        e.preventDefault();
+    e.preventDefault();
 
-        const trimmedMessage = input.trim();
+    const trimmedMessage = input.trim();
 
-        if (!trimmedMessage) {
-            return;
-        }
+    if (!trimmedMessage) {
+        return;
+    }
 
 
-        const userMessage = {
+    // USER MESSAGE
+    const userMessage = {
 
-            id:
-                `user-${Date.now()}`,
+        id: `user-${Date.now()}`,
 
-            role:
-                "user",
+        role: "user",
+
+        content: trimmedMessage,
+
+        createdAt: new Date().toISOString()
+
+    };
+
+
+    // Show user's message immediately
+    setMessages((previous) => [
+
+        ...previous,
+
+        userMessage
+
+    ]);
+
+
+    // Clear input
+    setInput("");
+
+
+    try {
+
+        // Send message to backend
+        const response = await chatWithAssistant({
+
+            message: trimmedMessage,
+
+            brandContext: savedBrand
+
+        });
+
+
+        // AI MESSAGE
+        const aiMessage = {
+
+            id: `assistant-${Date.now()}`,
+
+            role: "assistant",
+
+            content: response.data.response,
+
+            createdAt: new Date().toISOString()
+
+        };
+
+
+        // Show AI response
+        setMessages((previous) => [
+
+            ...previous,
+
+            aiMessage
+
+        ]);
+
+
+    } catch (error) {
+
+        console.error(
+            "AI Assistant error:",
+            error
+        );
+
+
+        const errorMessage = {
+
+            id: `error-${Date.now()}`,
+
+            role: "assistant",
 
             content:
-                trimmedMessage,
+                "Sorry, I couldn't process your request. Please try again.",
 
             createdAt:
                 new Date().toISOString()
@@ -118,15 +188,13 @@ function AIAssistant() {
 
             ...previous,
 
-            userMessage
+            errorMessage
 
         ]);
 
+    }
 
-        setInput("");
-
-    };
-
+};
 
     /* =========================================================
        QUICK PROMPT
