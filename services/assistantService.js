@@ -4,14 +4,95 @@ const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });
 
-const chatWithAssistant = async (message, brandContext = {}) => {
+const sleep = (ms) => {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+};
 
-    const prompt = `
+
+const generateWithRetry = async (prompt, maxRetries = 3) => {
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+
+        try {
+
+            console.log(
+                `Gemini Assistant Attempt ${attempt}/${maxRetries}`
+            );
+
+            const response = await ai.models.generateContent({
+                model: "gemini-3.8-flash",
+                contents: prompt
+            });
+
+            return response;
+
+        } catch (error) {
+
+            console.error(
+                `Gemini Assistant Attempt ${attempt} failed:`,
+                error?.status,
+                error?.message
+            );
+
+            const retryableErrors = [
+                429,
+                500,
+                503
+            ];
+
+            if (
+                retryableErrors.includes(error?.status) &&
+                attempt < maxRetries
+            ) {
+
+                const delay =
+                    attempt * 3000;
+
+                console.log(
+                    `Gemini temporarily unavailable. Retrying in ${
+                        delay / 1000
+                    } seconds...`
+                );
+
+                await sleep(delay);
+
+                continue;
+            }
+
+            throw error;
+        }
+    }
+
+    throw new Error(
+        "Gemini Assistant failed after multiple attempts."
+    );
+};
+
+
+const chatWithAssistant = async (
+    message,
+    brandContext = {}
+) => {
+
+    try {
+
+        if (!message || !message.trim()) {
+
+            throw new Error(
+                "Assistant message is empty."
+            );
+        }
+
+
+        const prompt = `
 You are BrandAI's in-app AI assistant.
 
 Your main purpose is to help users understand and use the BrandAI platform.
 
 You are NOT a general-purpose chatbot.
+
 You should mainly answer questions about BrandAI and guide users through its features.
 
 BRANDAI PLATFORM FEATURES:
@@ -64,27 +145,73 @@ IMPORTANT RULES:
   don't have enough information instead of making it up.
 - If the question is unrelated to BrandAI, politely explain
   that you are designed to help users use the BrandAI platform.
+- Do not return JSON.
+- Give a normal conversational answer.
+- Use short paragraphs or numbered steps when explaining a process.
 
 USER'S BRAND CONTEXT:
 
 Brand Name: ${brandContext?.brandName || "Not provided"}
+
 Industry: ${brandContext?.industry || "Not provided"}
+
 Audience: ${brandContext?.audience || "Not provided"}
+
 Tone: ${brandContext?.tone || "Not provided"}
-Products/Services: ${brandContext?.products || "Not provided"}
+
+Products/Services: ${
+    Array.isArray(brandContext?.products)
+        ? brandContext.products
+            .map((product) =>
+                typeof product === "object"
+                    ? product.name
+                    : product
+            )
+            .join(", ")
+        : brandContext?.products || "Not provided"
+}
 
 USER QUESTION:
 
 ${message}
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.8-flash",
-        contents: prompt
-    });
 
-    return response.text;
+        const response = await generateWithRetry(
+            prompt
+        );
+
+
+        const answer = response?.text?.trim();
+
+
+        if (!answer) {
+
+            throw new Error(
+                "Gemini returned an empty response."
+            );
+        }
+
+
+        console.log(
+            "BrandAI Assistant Response:",
+            answer
+        );
+
+
+        return answer;
+
+    } catch (error) {
+
+        console.error(
+            "AI Assistant Error:",
+            error
+        );
+
+        throw error;
+    }
 };
+
 
 module.exports = {
     chatWithAssistant
