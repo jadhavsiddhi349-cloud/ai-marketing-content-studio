@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
     createCampaign,
     getBrands
@@ -10,7 +11,6 @@ import {
     Mail,
     MessageCircle,
     Upload,
-    Image as ImageIcon,
     X,
     CheckCircle2
 } from "lucide-react";
@@ -20,7 +20,6 @@ function CreateCampaign() {
     const fileInputRef = useRef(null);
 
     const [currentUser, setCurrentUser] = useState(null);
-
     const [brands, setBrands] = useState([]);
 
     const [form, setForm] = useState({
@@ -29,7 +28,7 @@ function CreateCampaign() {
         goal: "",
         product: "",
         audience: "",
-        tone: ""
+        tone: "Professional"
     });
 
     const [platforms, setPlatforms] = useState([]);
@@ -39,6 +38,10 @@ function CreateCampaign() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    // ================================
+    // LOAD USER + BRANDS
+    // ================================
 
     useEffect(() => {
         const storedUser = JSON.parse(
@@ -56,38 +59,56 @@ function CreateCampaign() {
     }, [navigate]);
 
     const loadBrands = async () => {
-    try {
-        const response = await getBrands();
+        try {
+            const response = await getBrands();
 
-        console.log("Brands API response:", response.data);
+            console.log("Brands API response:", response.data);
 
-        const brandsData = Array.isArray(response.data)
-            ? response.data
-            : response.data?.brands || [];
+            const brandsData = Array.isArray(response.data)
+                ? response.data
+                : response.data?.brands || [];
 
-        setBrands(brandsData);
+            setBrands(brandsData);
 
-    } catch (error) {
-        console.log("Could not load brands:", error);
-        setBrands([]);
-    }
+        } catch (error) {
+            console.error("Could not load brands:", error);
+
+            setBrands([]);
+
+            setError(
+                error.response?.data?.message ||
+                "Failed to load brands."
+            );
+        }
     };
 
+    // ================================
+    // INPUT CHANGE
+    // ================================
+
     const handleChange = (e) => {
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+
+        setForm((previous) => ({
+            ...previous,
+            [name]: value
+        }));
 
         if (error) {
             setError("");
         }
     };
 
+    // ================================
+    // PLATFORM CHANGE
+    // ================================
+
     const togglePlatform = (platform) => {
         setPlatforms((previous) =>
             previous.includes(platform)
-                ? previous.filter((item) => item !== platform)
+                ? previous.filter(
+                    (item) => item !== platform
+                )
                 : [...previous, platform]
         );
 
@@ -95,6 +116,10 @@ function CreateCampaign() {
             setError("");
         }
     };
+
+    // ================================
+    // IMAGE CHANGE
+    // ================================
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
@@ -142,6 +167,10 @@ function CreateCampaign() {
         reader.readAsDataURL(file);
     };
 
+    // ================================
+    // REMOVE IMAGE
+    // ================================
+
     const removeProductImage = () => {
         setProductImage(null);
         setImagePreview("");
@@ -151,9 +180,17 @@ function CreateCampaign() {
         }
     };
 
+    // ================================
+    // UPLOAD BUTTON
+    // ================================
+
     const handleUploadClick = () => {
         fileInputRef.current?.click();
     };
+
+    // ================================
+    // CREATE CAMPAIGN
+    // ================================
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -164,6 +201,10 @@ function CreateCampaign() {
             navigate("/login");
             return;
         }
+
+        // ----------------------------
+        // VALIDATION
+        // ----------------------------
 
         if (!form.brandId) {
             setError(
@@ -214,148 +255,236 @@ function CreateCampaign() {
             return;
         }
 
+        // ----------------------------
+        // START LOADING
+        // ----------------------------
+
         setLoading(true);
 
         try {
-            /*
-             * The current backend campaign API does not require
-             * the product image. We therefore keep the image on
-             * the frontend campaign record for now.
-             *
-             * Later, the image can be sent to an AI vision endpoint
-             * without changing this page structure.
-             */
+
+            // ----------------------------
+            // SEND TO BACKEND
+            // ----------------------------
 
             const response = await createCampaign({
+
                 brandId: form.brandId,
-                campaignName: form.campaignName.trim(),
-                goal: form.goal.trim(),
-                product: form.product.trim(),
-                audience: form.audience.trim(),
-                tone: form.tone,
-                platforms
+
+                campaignName:
+                    form.campaignName.trim(),
+
+                goal:
+                    form.goal.trim(),
+
+                product:
+                    form.product.trim(),
+
+                audience:
+                    form.audience.trim(),
+
+                tone:
+                    form.tone,
+
+                platforms:
+                    platforms
             });
 
-            const backendCampaign = response.data;
-
-            const campaignId =
-                backendCampaign?._id ||
-                backendCampaign?.id ||
-                Date.now().toString();
-
-            /*
-             * Save a frontend campaign record for the current user.
-             * This allows Dashboard and other frontend pages to show
-             * the campaign and product image.
-             */
-
-            const campaignStorageKey =
-                `brandai_campaigns_${currentUser.id}`;
-
-            const existingCampaigns = JSON.parse(
-                localStorage.getItem(campaignStorageKey) || "[]"
+            console.log(
+                "Campaign created:",
+                response.data
             );
 
-            const localCampaign = {
+            // ==================================================
+            // IMPORTANT
+            // BACKEND RESPONSE:
+            //
+            // {
+            //   success: true,
+            //   message: "...",
+            //   campaign: {
+            //       _id: "...",
+            //       ...
+            //   }
+            // }
+            //
+            // ==================================================
+
+            const backendCampaign =
+                response.data?.campaign;
+
+            console.log(
+                "Backend Campaign:",
+                backendCampaign
+            );
+
+            // Get MongoDB _id ONLY
+            const campaignId =
+                backendCampaign?._id;
+
+            console.log(
+                "MongoDB Campaign ID:",
+                campaignId
+            );
+
+            // ==================================================
+            // NEVER USE Date.now() FOR CAMPAIGN ID
+            // ==================================================
+
+            if (!campaignId) {
+                throw new Error(
+                    "Campaign ID was not returned by the server."
+                );
+            }
+
+            // ==================================================
+            // CHECK MONGODB OBJECT ID
+            // ==================================================
+
+            if (
+                typeof campaignId !== "string" ||
+                !/^[0-9a-fA-F]{24}$/.test(campaignId)
+            ) {
+                throw new Error(
+                    `Invalid MongoDB Campaign ID received: ${campaignId}`
+                );
+            }
+
+            // ==================================================
+            // SAVE CAMPAIGN LOCALLY
+            // ==================================================
+
+            const savedCampaigns =
+                JSON.parse(
+                    localStorage.getItem("campaigns") ||
+                    "[]"
+                );
+
+            const newCampaign = {
+                ...backendCampaign,
+
+                // Both use MongoDB ID
                 id: campaignId,
                 _id: campaignId,
-                brandId: form.brandId,
 
-                campaignName: form.campaignName.trim(),
-                goal: form.goal.trim(),
-                product: form.product.trim(),
-                audience: form.audience.trim(),
-                tone: form.tone,
-
-                platforms: [...platforms],
-
-                status: "draft",
-                approved: false,
-
-                contentCount: 0,
-
-                productImage: imagePreview || null,
+                // Keep frontend image information
+                productImage:
+                    imagePreview || null,
 
                 productImageName:
                     productImage?.name || null,
 
                 productImageType:
-                    productImage?.type || null,
-
-                createdAt: new Date().toISOString(),
-
-                updatedAt: new Date().toISOString()
+                    productImage?.type || null
             };
 
-            existingCampaigns.unshift(localCampaign);
+            const updatedCampaigns = [
+                newCampaign,
+                ...savedCampaigns
+            ];
 
             localStorage.setItem(
-                campaignStorageKey,
-                JSON.stringify(existingCampaigns)
+                "campaigns",
+                JSON.stringify(updatedCampaigns)
             );
 
-            /*
-             * Add dashboard activity.
-             */
+            // ==================================================
+            // SAVE ACTIVITY
+            // ==================================================
 
-            const activityStorageKey =
-                `brandai_activity_${currentUser.id}`;
+            const activities =
+                JSON.parse(
+                    localStorage.getItem("activities") ||
+                    "[]"
+                );
 
-            const existingActivities = JSON.parse(
-                localStorage.getItem(activityStorageKey) || "[]"
-            );
-
-            existingActivities.unshift({
+            const newActivity = {
+                // Date.now() is OK HERE.
+                // This is ONLY activity ID.
                 id: Date.now(),
+
                 type: "campaign",
-                title: "Campaign created",
+
+                title:
+                    form.campaignName.trim(),
+
                 description:
-                    `${form.campaignName.trim()} was created.`,
-                createdAt: new Date().toISOString()
-            });
+                    "Campaign generated successfully",
+
+                createdAt:
+                    new Date().toISOString()
+            };
 
             localStorage.setItem(
-                activityStorageKey,
-                JSON.stringify(
-                    existingActivities.slice(0, 20)
-                )
+                "activities",
+                JSON.stringify([
+                    newActivity,
+                    ...activities
+                ])
             );
 
-            /*
-             * Tell the dashboard to refresh.
-             */
+            // ==================================================
+            // DASHBOARD UPDATE
+            // ==================================================
 
             window.dispatchEvent(
-                new Event("brandai-dashboard-update")
+                new Event("campaignsUpdated")
             );
 
-            navigate(`/campaign/${campaignId}`);
+            // ==================================================
+            // FINAL NAVIGATION
+            // ==================================================
+            //
+            // ONLY ONE navigate()
+            //
+            // MongoDB _id is used.
+            //
+            // ==================================================
 
-        } catch (err) {
+            navigate(
+                `/campaign/${campaignId}`
+            );
+
+        } catch (error) {
+
             console.error(
-                "Campaign creation failed:",
-                err
+                "Create campaign error:",
+                error
             );
 
-            setError(
-                err?.response?.data?.message ||
-                "Something went wrong while creating the campaign. Please try again."
-            );
+            const errorMessage =
+                error.response?.data?.message ||
+                error.message ||
+                "Failed to generate campaign.";
+
+            setError(errorMessage);
+
         } finally {
+
             setLoading(false);
+
         }
     };
+
+    // ======================================================
+    // UI
+    // ======================================================
 
     return (
         <main className="app-page">
 
-            {/* PAGE HEADER */}
+            {/* =========================
+                PAGE HEADER
+            ========================== */}
 
             <div className="page-heading">
 
                 <div className="small-badge">
+
                     <Sparkles size={12} />
+
                     CAMPAIGN WORKSPACE
+
                 </div>
 
                 <h1>
@@ -371,8 +500,9 @@ function CreateCampaign() {
 
             </div>
 
-
-            {/* FORM */}
+            {/* =========================
+                FORM
+            ========================== */}
 
             <form
                 className="glass-form"
@@ -381,7 +511,9 @@ function CreateCampaign() {
 
                 <div className="form-grid">
 
-                    {/* BRAND */}
+                    {/* =========================
+                        BRAND
+                    ========================== */}
 
                     <div className="input-group">
 
@@ -394,25 +526,31 @@ function CreateCampaign() {
                             name="brandId"
                             value={form.brandId}
                             onChange={handleChange}
+                            required
                         >
+
                             <option value="">
                                 Select your brand
                             </option>
 
                             {brands.map((brand) => (
+
                                 <option
                                     key={brand._id}
                                     value={brand._id}
                                 >
-                                    {brand.name}
+                                    {brand.brandName}
                                 </option>
+
                             ))}
+
                         </select>
 
                     </div>
 
-
-                    {/* CAMPAIGN NAME */}
+                    {/* =========================
+                        CAMPAIGN NAME
+                    ========================== */}
 
                     <div className="input-group">
 
@@ -427,12 +565,14 @@ function CreateCampaign() {
                             value={form.campaignName}
                             onChange={handleChange}
                             placeholder="e.g. Summer Launch Campaign"
+                            required
                         />
 
                     </div>
 
-
-                    {/* GOAL */}
+                    {/* =========================
+                        GOAL
+                    ========================== */}
 
                     <div className="input-group full">
 
@@ -447,12 +587,14 @@ function CreateCampaign() {
                             value={form.goal}
                             onChange={handleChange}
                             placeholder="e.g. Increase product awareness and generate sales"
+                            required
                         />
 
                     </div>
 
-
-                    {/* PRODUCT */}
+                    {/* =========================
+                        PRODUCT
+                    ========================== */}
 
                     <div className="input-group">
 
@@ -467,12 +609,14 @@ function CreateCampaign() {
                             value={form.product}
                             onChange={handleChange}
                             placeholder="e.g. Organic Face Serum"
+                            required
                         />
 
                     </div>
 
-
-                    {/* AUDIENCE */}
+                    {/* =========================
+                        AUDIENCE
+                    ========================== */}
 
                     <div className="input-group">
 
@@ -487,12 +631,14 @@ function CreateCampaign() {
                             value={form.audience}
                             onChange={handleChange}
                             placeholder="e.g. Women aged 20–35"
+                            required
                         />
 
                     </div>
 
-
-                    {/* TONE */}
+                    {/* =========================
+                        TONE
+                    ========================== */}
 
                     <div className="input-group full">
 
@@ -505,10 +651,8 @@ function CreateCampaign() {
                             name="tone"
                             value={form.tone}
                             onChange={handleChange}
+                            required
                         >
-                            <option value="">
-                                Select a tone
-                            </option>
 
                             <option value="Professional">
                                 Professional
@@ -518,33 +662,40 @@ function CreateCampaign() {
                                 Friendly
                             </option>
 
-                            <option value="Bold">
-                                Bold
+                            <option value="Casual">
+                                Casual
+                            </option>
+
+                            <option value="Fun">
+                                Fun
+                            </option>
+
+                            <option value="Inspirational">
+                                Inspirational
                             </option>
 
                             <option value="Luxury">
                                 Luxury
                             </option>
 
-                            <option value="Playful">
-                                Playful
+                            <option value="Bold">
+                                Bold
                             </option>
 
-                            <option value="Minimal">
-                                Minimal
-                            </option>
                         </select>
 
                     </div>
 
-
-                    {/* PRODUCT IMAGE */}
+                    {/* =========================
+                        PRODUCT IMAGE
+                    ========================== */}
 
                     <div className="input-group full">
 
                         <div className="product-image-heading">
 
                             <div>
+
                                 <label>
                                     Product image
                                 </label>
@@ -553,15 +704,18 @@ function CreateCampaign() {
                                     Upload an image of your product
                                     for AI-powered campaign understanding.
                                 </p>
+
                             </div>
 
                             <span className="product-image-ai-badge">
+
                                 <Sparkles size={11} />
+
                                 AI READY
+
                             </span>
 
                         </div>
-
 
                         {!imagePreview ? (
 
@@ -572,7 +726,9 @@ function CreateCampaign() {
                             >
 
                                 <div className="product-upload-icon">
+
                                     <Upload size={21} />
+
                                 </div>
 
                                 <div className="product-upload-content">
@@ -592,7 +748,9 @@ function CreateCampaign() {
                                 </div>
 
                                 <div className="product-upload-action">
+
                                     Choose image
+
                                 </div>
 
                             </button>
@@ -615,10 +773,13 @@ function CreateCampaign() {
                                     <div className="product-image-success">
 
                                         <div className="product-image-success-icon">
+
                                             <CheckCircle2 size={15} />
+
                                         </div>
 
                                         <div>
+
                                             <strong>
                                                 Product image uploaded
                                             </strong>
@@ -626,6 +787,7 @@ function CreateCampaign() {
                                             <span>
                                                 {productImage?.name}
                                             </span>
+
                                         </div>
 
                                     </div>
@@ -644,8 +806,11 @@ function CreateCampaign() {
                                             className="product-image-remove"
                                             onClick={removeProductImage}
                                         >
+
                                             <X size={14} />
+
                                             Remove
+
                                         </button>
 
                                     </div>
@@ -668,11 +833,14 @@ function CreateCampaign() {
 
                 </div>
 
-
-                {/* PLATFORM */}
+                {/* =========================
+                    PLATFORMS
+                ========================== */}
 
                 <div className="platform-heading">
+
                     Where do you want to publish?
+
                 </div>
 
                 <div className="platform-select">
@@ -688,10 +856,11 @@ function CreateCampaign() {
                             togglePlatform("Instagram")
                         }
                     >
+
                         <span>◎</span>
                         <span>Instagram</span>
-                    </button>
 
+                    </button>
 
                     <button
                         type="button"
@@ -704,10 +873,11 @@ function CreateCampaign() {
                             togglePlatform("Facebook")
                         }
                     >
+
                         <span>f</span>
                         <span>Facebook</span>
-                    </button>
 
+                    </button>
 
                     <button
                         type="button"
@@ -720,10 +890,11 @@ function CreateCampaign() {
                             togglePlatform("LinkedIn")
                         }
                     >
+
                         <span>in</span>
                         <span>LinkedIn</span>
-                    </button>
 
+                    </button>
 
                     <button
                         type="button"
@@ -736,10 +907,11 @@ function CreateCampaign() {
                             togglePlatform("YouTube")
                         }
                     >
+
                         <span>▶</span>
                         <span>YouTube</span>
-                    </button>
 
+                    </button>
 
                     <button
                         type="button"
@@ -752,10 +924,14 @@ function CreateCampaign() {
                             togglePlatform("WhatsApp")
                         }
                     >
-                        <MessageCircle size={22} />
-                        <span>WhatsApp</span>
-                    </button>
 
+                        <MessageCircle size={22} />
+
+                        <span>
+                            WhatsApp
+                        </span>
+
+                    </button>
 
                     <button
                         type="button"
@@ -768,38 +944,57 @@ function CreateCampaign() {
                             togglePlatform("Email")
                         }
                     >
+
                         <Mail size={22} />
-                        <span>Email</span>
+
+                        <span>
+                            Email
+                        </span>
+
                     </button>
 
                 </div>
 
-
-                {/* SUBMIT */}
+                {/* =========================
+                    SUBMIT
+                ========================== */}
 
                 <button
                     type="submit"
                     className="form-button"
                     disabled={loading}
                 >
+
                     {loading ? (
+
                         <>
                             <Sparkles size={16} />
                             Creating campaign...
                         </>
+
                     ) : (
+
                         <>
                             <Sparkles size={16} />
                             Generate Campaign
                         </>
+
                     )}
+
                 </button>
 
+                {/* =========================
+                    ERROR
+                ========================== */}
 
                 {error && (
+
                     <div className="error-message">
+
                         {error}
+
                     </div>
+
                 )}
 
             </form>

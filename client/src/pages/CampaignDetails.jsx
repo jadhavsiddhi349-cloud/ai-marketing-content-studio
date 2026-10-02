@@ -19,10 +19,10 @@ function CampaignDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [campaign, setCampaign] = useState(null);
-
-    const [message, setMessage] = useState("");
-
+   const [campaign, setCampaign] = useState(null);
+const [message, setMessage] = useState("");
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
 
     useEffect(() => {
 
@@ -31,25 +31,69 @@ function CampaignDetails() {
     }, [id]);
 
 
-    const loadCampaign = async () => {
+//     const loadCampaign = async () => {
+//     try {
+//         setLoading(true);
+//         setError("");
 
-        try {
+//         console.log("Campaign ID:", id);
 
-            const response =
-                await getCampaign(id);
+//         const response = await getCampaign(id);
 
-            setCampaign(
-                response.data.campaign
+//         console.log("Campaign API response:", response.data);
+
+//         setCampaign(response.data.campaign);
+
+//     } catch (error) {
+//         console.error("Get campaign error:", error);
+
+//         setError(
+//             error.response?.data?.message ||
+//             "Failed to load campaign."
+//         );
+//     } finally {
+//         setLoading(false);
+//     }
+// };
+const loadCampaign = async () => {
+    try {
+        setLoading(true);
+        setError("");
+
+        console.log("Campaign ID from URL:", id);
+
+        // Check MongoDB ObjectId format
+        if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+            setError(
+                `Invalid campaign ID: ${id}`
             );
-
-        } catch (error) {
-
-            console.log(error);
-
+            return;
         }
 
-    };
+        const response = await getCampaign(id);
 
+        console.log(
+            "Campaign API response:",
+            response.data
+        );
+
+        setCampaign(response.data.campaign);
+
+    } catch (error) {
+        console.error(
+            "Get campaign error:",
+            error
+        );
+
+        setError(
+            error.response?.data?.message ||
+            "Failed to load campaign."
+        );
+
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleQualityCheck = async () => {
 
@@ -65,25 +109,111 @@ function CampaignDetails() {
 
 
     const handleApprove = async () => {
-        await approveCampaign(id);
+    try {
+        // 1. Approve campaign in MongoDB
+        const response = await approveCampaign(id);
 
-        await loadCampaign();
+        console.log("Approve response:", response.data);
 
-        setMessage("Campaign approved successfully!");
-
-        navigate("/dashboard");
-    };
-
-
-    if (!campaign) {
-
-        return (
-            <main className="app-page">
-                <h2>Loading campaign...</h2>
-            </main>
+        // 2. Update campaign in localStorage
+        const currentUser = JSON.parse(
+            localStorage.getItem("brandai_current_user") || "null"
         );
 
+        if (currentUser) {
+            const storageKey =
+                `brandai_campaigns_${currentUser.id}`;
+
+            const savedCampaigns = JSON.parse(
+                localStorage.getItem(storageKey) || "[]"
+            );
+
+            const updatedCampaigns = savedCampaigns.map(
+                (campaign) => {
+
+                    const campaignId =
+                        campaign._id ||
+                        campaign.id;
+
+                    if (
+                        String(campaignId) ===
+                        String(id)
+                    ) {
+                        return {
+                            ...campaign,
+                            status: "approved",
+                            approved: true
+                        };
+                    }
+
+                    return campaign;
+                }
+            );
+
+            localStorage.setItem(
+                storageKey,
+                JSON.stringify(updatedCampaigns)
+            );
+
+            console.log(
+                "Updated campaigns in localStorage:",
+                updatedCampaigns
+            );
+        }
+
+        // 3. Tell Dashboard to refresh
+        window.dispatchEvent(
+            new Event("brandai-dashboard-update")
+        );
+
+        // 4. Reload campaign
+        await loadCampaign();
+
+        setMessage(
+            "Campaign approved successfully!"
+        );
+
+        // 5. Go to Dashboard
+        navigate("/dashboard");
+
+    } catch (error) {
+
+        console.error(
+            "Approve campaign error:",
+            error
+        );
+
+        setMessage(
+            error.response?.data?.message ||
+            "Failed to approve campaign."
+        );
     }
+};
+
+  if (loading) {
+    return (
+        <main className="app-page">
+            <h2>Loading campaign...</h2>
+        </main>
+    );
+}
+
+if (error) {
+    return (
+        <main className="app-page">
+            <h2>Unable to load campaign</h2>
+            <p>{error}</p>
+        </main>
+    );
+}
+
+if (!campaign) {
+    return (
+        <main className="app-page">
+            <h2>Campaign not found</h2>
+        </main>
+    );
+}
 
 
     return (

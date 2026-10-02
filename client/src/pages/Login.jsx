@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link,useLocation, useNavigate } from "react-router-dom";
 import {
     ArrowRight,
     Eye,
@@ -10,6 +10,7 @@ import {
 
 function Login() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [form, setForm] = useState({
         email: "",
@@ -77,7 +78,13 @@ function Login() {
 
         setLoading(false);
 
-        navigate("/dashboard");
+        const destination =
+    location.state?.from?.pathname ||
+    "/dashboard";
+
+navigate(destination, {
+    replace: true
+});
     };
 
     return (

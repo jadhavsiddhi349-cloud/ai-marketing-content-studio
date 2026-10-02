@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import * as api from "../services/api";
 
 import {
     ArrowLeft,
@@ -128,13 +129,10 @@ function AIAssistant() {
     try {
 
         // Send message to backend
-        const response = await chatWithAssistant({
-
-            message: trimmedMessage,
-
-            brandContext: savedBrand
-
-        });
+        const response = await api.chatWithAssistant({
+    message: trimmedMessage,
+    brandContext: savedBrand
+});
 
 
         // AI MESSAGE

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createBrand } from "../services/api";
 
 import {
     Brain,
@@ -63,79 +64,159 @@ function BrandBrain() {
     };
 
 
-    const handleSubmit = (e) => {
+    // const handleSubmit = (e) => {
 
-        e.preventDefault();
+    //     e.preventDefault();
 
-        setError("");
-        setSavedMessage(false);
-
-
-        if (!currentUser) {
-            navigate("/login");
-            return;
-        }
+    //     setError("");
+    //     setSavedMessage(false);
 
 
-        if (
-            !form.brandName.trim() ||
-            !form.industry.trim() ||
-            !form.audience.trim() ||
-            !form.tone ||
-            !form.products.trim() ||
-            !form.description.trim()
-        ) {
-
-            setError(
-                "Please complete all required brand information."
-            );
-
-            return;
-        }
+    //     if (!currentUser) {
+    //         navigate("/login");
+    //         return;
+    //     }
 
 
-        /*
-         * SAVE BRAND FOR THIS SPECIFIC USER
-         */
+    //     if (
+    //         !form.brandName.trim() ||
+    //         !form.industry.trim() ||
+    //         !form.audience.trim() ||
+    //         !form.tone ||
+    //         !form.products.trim() ||
+    //         !form.description.trim()
+    //     ) {
 
+    //         setError(
+    //             "Please complete all required brand information."
+    //         );
+
+    //         return;
+    //     }
+
+
+    //     /*
+    //      * SAVE BRAND FOR THIS SPECIFIC USER
+    //      */
+
+    //     localStorage.setItem(
+    //         `brandai_brand_${currentUser.id}`,
+    //         JSON.stringify(form)
+    //     );
+
+
+    //     /*
+    //      * MARK BRAND SETUP AS COMPLETED
+    //      */
+
+    //     localStorage.setItem(
+    //         `brandai_brand_setup_${currentUser.id}`,
+    //         "completed"
+    //     );
+
+
+    //     /*
+    //      * LET OTHER PAGES KNOW THAT
+    //      * THE BRAND INFORMATION CHANGED
+    //      */
+
+    //     window.dispatchEvent(
+    //         new Event("brandai-dashboard-update")
+    //     );
+
+
+    //     setSavedMessage(true);
+
+
+    //     /*
+    //      * RETURN TO DASHBOARD
+    //      */
+
+    //     setTimeout(() => {
+    //         navigate("/dashboard");
+    //     }, 500);
+
+    // };
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setError("");
+    setSavedMessage(false);
+
+    if (!currentUser) {
+        navigate("/login");
+        return;
+    }
+
+    if (
+        !form.brandName.trim() ||
+        !form.industry.trim() ||
+        !form.audience.trim() ||
+        !form.tone ||
+        !form.products.trim() ||
+        !form.description.trim()
+    ) {
+        setError("Please complete all required brand information.");
+        return;
+    }
+
+    try {
+        // Prepare data according to backend Brand schema
+        const brandData = {
+            brandName: form.brandName,
+            description: form.description,
+            tone: form.tone,
+            targetAudience: form.audience,
+
+            products: [
+                {
+                    name: form.products,
+                    description: ""
+                }
+            ],
+
+            offers: "",
+            preferredStyle: form.colors,
+            preferredLanguage: "English"
+        };
+
+        // Save brand to MongoDB
+        const response = await createBrand(brandData);
+
+        console.log("Brand created:", response.data);
+
+        // Keep localStorage also, if you want Brand Brain
+        // information to remain available on the frontend
         localStorage.setItem(
             `brandai_brand_${currentUser.id}`,
             JSON.stringify(form)
         );
-
-
-        /*
-         * MARK BRAND SETUP AS COMPLETED
-         */
 
         localStorage.setItem(
             `brandai_brand_setup_${currentUser.id}`,
             "completed"
         );
 
-
-        /*
-         * LET OTHER PAGES KNOW THAT
-         * THE BRAND INFORMATION CHANGED
-         */
-
         window.dispatchEvent(
             new Event("brandai-dashboard-update")
         );
 
-
         setSavedMessage(true);
 
-
-        /*
-         * RETURN TO DASHBOARD
-         */
-
+        // Go back to dashboard
         setTimeout(() => {
             navigate("/dashboard");
         }, 500);
 
-    };
+    } catch (error) {
+        console.error("Create brand error:", error);
+
+        setError(
+            error.response?.data?.message ||
+            "Failed to save brand. Please try again."
+        );
+    }
+};
 
 
     return (

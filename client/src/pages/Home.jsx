@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 
 import {
     ArrowRight,
-    CheckCircle2,
     Sparkles,
     Brain,
     ShieldCheck,
@@ -70,31 +69,51 @@ function Home() {
                 <div className="feature-grid">
 
 
+                    {/* =========================================
+                        BRAND BRAIN
+                    ========================================= */}
+
                     <Feature
                         icon={<Brain size={23} />}
                         title="Brand Brain"
                         text="Store your brand tone, audience, products and preferred style."
+                        path="/feature/brand-brain"
                     />
 
+
+                    {/* =========================================
+                        MULTI PLATFORM
+                    ========================================= */}
 
                     <Feature
                         icon={<Sparkles size={23} />}
                         title="Multi-Platform"
                         text="Generate content for Instagram, Facebook, LinkedIn, YouTube, WhatsApp and Email."
+                        path="/feature/multi-platform"
                     />
 
+
+                    {/* =========================================
+                        AI ASSISTANT
+                    ========================================= */}
 
                     <Feature
                         icon={<WandSparkles size={23} />}
                         title="AI Assistant"
                         text="Ask BrandAI questions and improve your marketing ideas."
+                        path="/feature/ai-assistant"
                     />
 
+
+                    {/* =========================================
+                        QUALITY CHECKER
+                    ========================================= */}
 
                     <Feature
                         icon={<ShieldCheck size={23} />}
                         title="Quality Checker"
                         text="Check clarity, brand consistency, CTA and audience fit."
+                        path="/feature/content-checker"
                     />
 
 
@@ -239,7 +258,8 @@ function Home() {
 function Feature({
     icon,
     title,
-    text
+    text,
+    path
 }) {
 
     return (
@@ -262,7 +282,10 @@ function Feature({
             </p>
 
 
-            <div className="feature-bottom">
+            <Link
+                to={path}
+                className="feature-bottom"
+            >
 
                 <span>
                     Explore
@@ -270,7 +293,7 @@ function Feature({
 
                 <ArrowRight size={16} />
 
-            </div>
+            </Link>
 
 
         </div>
