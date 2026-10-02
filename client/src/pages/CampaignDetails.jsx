@@ -70,14 +70,27 @@ const loadCampaign = async () => {
             return;
         }
 
+        // const response = await getCampaign(id);
+
+        // console.log(
+        //     "Campaign API response:",
+        //     response.data
+        // );
+
+        // setCampaign(response.data.campaign);
         const response = await getCampaign(id);
 
-        console.log(
-            "Campaign API response:",
-            response.data
-        );
+console.log(
+    "FULL CAMPAIGN API RESPONSE:",
+    JSON.stringify(response.data, null, 2)
+);
 
-        setCampaign(response.data.campaign);
+console.log(
+    "CAMPAIGN CONTENT:",
+    JSON.stringify(response.data.campaign?.content, null, 2)
+);
+
+setCampaign(response.data.campaign);
 
     } catch (error) {
         console.error(
