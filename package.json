@@ -5,7 +5,8 @@
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "init": "^0.1.2",
-    "mongoose": "^9.10.3"
+    "mongoose": "^9.10.3",
+    "multer": "^2.4.0"
   },
   "name": "brandai",
   "version": "1.0.0",
